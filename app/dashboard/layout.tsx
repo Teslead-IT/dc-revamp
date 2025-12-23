@@ -1,3 +1,4 @@
+
 "use client"
 
 import type React from "react"
@@ -37,10 +38,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="flex h-screen items-center justify-center bg-[#0B1120]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
-          <p className="text-sm text-slate-500">Loading...</p>
+          <Loader2 className="h-10 w-10 animate-spin text-emerald-500" />
+          <p className="text-sm text-slate-400">Loading...</p>
         </div>
       </div>
     )
@@ -51,16 +52,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="flex h-screen w-full bg-[#0B1120] overflow-hidden">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       <div
         className={cn(
-          "flex min-h-screen flex-col transition-all duration-300 ease-in-out",
+          "flex flex-1 flex-col h-full overflow-hidden transition-all duration-300 ease-in-out",
           sidebarCollapsed ? "ml-[68px]" : "ml-60 lg:ml-64",
         )}
       >
         <Header />
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-hidden p-4 lg:p-6 bg-[#0B1120]">
+          {children}
+        </main>
       </div>
     </div>
   )

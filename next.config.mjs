@@ -6,18 +6,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      // Mark database modules as external to prevent bundling issues
-      config.externals = config.externals || []
-      config.externals.push(
-        'pg',
-        'pg-hstore', 
-        'sequelize'
-      )
-    }
-    return config
-  },
+  serverExternalPackages: ['sequelize', 'pg', 'pg-hstore'],
 }
 
 export default nextConfig

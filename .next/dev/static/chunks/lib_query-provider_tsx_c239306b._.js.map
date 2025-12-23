@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///D:/Projects/Teslead/Nextjs/next-js-dashboard-with-backend/lib/query-provider.tsx"],"sourcesContent":["\"use client\"\n\nimport { QueryClient, QueryClientProvider } from \"@tanstack/react-query\"\nimport { useState, type ReactNode } from \"react\"\n\nexport function QueryProvider({ children }: { children: ReactNode }) {\n  const [queryClient] = useState(\n    () =>\n      new QueryClient({\n        defaultOptions: {\n          queries: {\n            staleTime: 60 * 1000, // 1 minute\n            refetchOnWindowFocus: false,\n          },\n        },\n      }),\n  )\n\n  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>\n}\n"],"names":[],"mappings":";;;;;AAEA;AAAA;AACA;;;AAHA;;;AAKO,SAAS,cAAc,EAAE,QAAQ,EAA2B;;IACjE,MAAM,CAAC,YAAY,GAAG,IAAA,yKAAQ;kCAC5B,IACE,IAAI,+LAAW,CAAC;gBACd,gBAAgB;oBACd,SAAS;wBACP,WAAW,KAAK;wBAChB,sBAAsB;oBACxB;gBACF;YACF;;IAGJ,qBAAO,6LAAC,gNAAmB;QAAC,QAAQ;kBAAc;;;;;;AACpD;GAdgB;KAAA"}}]
+}

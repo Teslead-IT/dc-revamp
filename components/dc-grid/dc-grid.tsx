@@ -65,20 +65,12 @@ export default function DCGrid() {
             if (!res.ok) throw new Error('Network response was not ok')
             return res.json()
         },
-        placeholderData: (previousData) => previousData
+        placeholderData: (previousData: any) => previousData
     })
 
     // Updated ColDefs with Pinned Columns
     const [colDefs] = useState<ColDef[]>([
-        {
-            field: "status",
-            headerName: "Status",
-            cellRenderer: StatusCellRenderer,
-            width: 130,
-            pinned: "left", // Pinned Left
-            lockPinned: true, // Prevent unpinning logic if desired, keeping it simple
-            cellClass: "flex items-center"
-        },
+
         {
             field: "dcNumber",
             headerName: "DC Number",
@@ -88,6 +80,15 @@ export default function DCGrid() {
             checkboxSelection: true,
             headerCheckboxSelection: true,
             cellClass: "font-medium text-slate-200"
+        },
+        {
+            field: "status",
+            headerName: "Status",
+            cellRenderer: StatusCellRenderer,
+            width: 130,
+            pinned: "left", // Pinned Left
+            lockPinned: true, // Prevent unpinning logic if desired, keeping it simple
+            cellClass: "flex items-center"
         },
         {
             field: "dispatchDate",
@@ -225,7 +226,7 @@ export default function DCGrid() {
                         rowData={data?.rowData || []}
                         columnDefs={colDefs}
                         defaultColDef={defaultColDef}
-                        rowSelection="multiple"
+                        // rowSelection="multiple"
                         animateRows={true}
                         onGridReady={onGridReady}
                         onSortChanged={onSortChanged}
@@ -251,7 +252,7 @@ export default function DCGrid() {
                         size="icon"
                         onClick={handlePrev}
                         disabled={page === 0 || isLoading}
-                        className="h-8 w-8 text-slate-400 hover:text-white"
+                        className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
                     >
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
@@ -263,7 +264,7 @@ export default function DCGrid() {
                         size="icon"
                         onClick={handleNext}
                         disabled={page >= totalPages - 1 || isLoading}
-                        className="h-8 w-8 text-slate-400 hover:text-white"
+                        className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
                     >
                         <ChevronRight className="h-4 w-4" />
                     </Button>

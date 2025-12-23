@@ -113,6 +113,9 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand: #09158f;
+  --color-brand-highlight: #4c5dff;
+  /* Lighter variant for visibility on dark */
 }
 
 @layer base {
@@ -142,6 +145,39 @@
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
 }
+
+/* Custom Scrollbar Implementation */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  /* Thin scrollbar */
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  /* Hidden track background */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(51, 65, 85, 0.5);
+  /* Semi-transparent slate-700 for subtle look */
+  border-radius: 10px;
+  border: 2px solid transparent;
+  /* Padding around thumb */
+  background-clip: content-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(71, 85, 105, 0.8);
+  /* Darker on hover */
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(51, 65, 85, 0.5) transparent;
+}
+
 
 /* Added custom animation for loading bar and table responsive utility */
 @keyframes loading {

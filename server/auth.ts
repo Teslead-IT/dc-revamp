@@ -1,7 +1,7 @@
 // Server-side JWT Authentication utilities
 import { initializeDatabase } from "./database"
 import User from "./models/user.model"
-import  {verifyPassword}  from "../server/functions/password"
+import { verifyPassword as verifyPasswordHash } from "../server/functions/password"
 import { generateAccessToken, generateRefreshToken } from "./middleware/auth.middleware"
 
 export interface UserData {
@@ -61,7 +61,7 @@ export async function verifyPassword(userId: string, password: string): Promise<
     // if (user.getDataValue("password") !== password) {
     //   return { success: false, message: "Invalid credentials" }
     // }
-    const isValid = await verifyPassword(password, user.getDataValue("password"))
+    const isValid = await verifyPasswordHash(user.getDataValue("password"), password)
     if (!isValid) {
       return { success: false, message: "Invalid credentials" }
     }

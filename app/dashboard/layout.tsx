@@ -1,3 +1,4 @@
+
 "use client"
 
 import type React from "react"
@@ -7,7 +8,8 @@ import { Sidebar } from "@/components/dashboard/sidebar"
 import { Header } from "@/components/dashboard/header"
 import { useSession } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
-import { Loader2 } from "lucide-react"
+// import { Loader2 } from "lucide-react" // Removed unused
+import { GlowLoader } from "@/components/ui/glow-loader"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -37,11 +39,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
-          <p className="text-sm text-slate-500">Loading...</p>
-        </div>
+      <div className="flex h-screen items-center justify-center bg-[#202124]">
+        <GlowLoader />
       </div>
     )
   }
@@ -51,16 +50,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="flex h-screen w-screen max-w-full bg-[#202124] overflow-hidden">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       <div
         className={cn(
-          "flex min-h-screen flex-col transition-all duration-300 ease-in-out",
-          sidebarCollapsed ? "ml-[68px]" : "ml-60 lg:ml-64",
+          "flex flex-1 flex-col h-full overflow-hidden transition-all duration-300 ease-in-out bg-[#202124]",
+          sidebarCollapsed ? "ml-[72px]" : "ml-64",
         )}
       >
         <Header />
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-auto bg-[#202124]">
+          {children}
+        </main>
       </div>
     </div>
   )

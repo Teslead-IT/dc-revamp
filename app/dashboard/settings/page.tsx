@@ -16,9 +16,8 @@ const ART_OPTIONS = [
   { id: 'art-1', src: '/line-arts/art-1.png', label: 'Art 1' },
   { id: 'art-2', src: '/line-arts/art-2.png', label: 'Art 2' },
   { id: 'art-3', src: '/line-arts/art-3.png', label: 'Art 3' },
-  { id: 'art-4', src: '/line-arts/art-4.png', label: 'Art 4' }
-  //   { id: 'art-5', src: '/line-arts/art-5.svg', label: 'Art 5' },
-  //   { id: 'art-6', src: '/line-arts/art-6.svg', label: 'Art 6' },
+  { id: 'art-4', src: '/line-arts/art-4.png', label: 'Art 4' },
+  { id: 'art-5', src: '/line-arts/art-5.png', label: 'Art 5' },
 ]
 
 export default function SettingsPage() {

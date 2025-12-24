@@ -20,19 +20,22 @@ import {
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 import { NewDCSheet } from "./new-dc-sheet"
+import { ColumnManager, type ColumnConfig } from "./column-manager"
 
 interface GridHeaderProps {
     onSearch: (term: string) => void;
     activeView: string;
     onViewChange: (view: string) => void;
     totalCount: number;
+    columns?: ColumnConfig[];
+    onColumnsChange?: (columns: ColumnConfig[]) => void;
 }
 
-export function GridHeader({ onSearch, activeView, onViewChange, totalCount }: GridHeaderProps) {
+export function GridHeader({ onSearch, activeView, onViewChange, totalCount, columns, onColumnsChange }: GridHeaderProps) {
     const router = useRouter()
 
     return (
-        <div className="flex items-center justify-between gap-3 mb-1.5 pt-1">
+        <div className="flex items-center justify-between gap-3 mb-1.5 pt-1 px-3 md:px-10 lg:px-4 lg:py-2">
             {/* Left Side: View Dropdown (Zoho Style) */}
             <div className="flex items-center gap-2">
                 <DropdownMenu>
@@ -75,13 +78,27 @@ export function GridHeader({ onSearch, activeView, onViewChange, totalCount }: G
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Filter & Settings Icons */}
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-white hover:bg-slate-800">
-                    <Filter className="h-3.5 w-3.5" />
-                </Button>
-
                 {/* New DC Button */}
                 <NewDCSheet />
+            </div>
+
+            {/* Right Side: Search and Column Manager */}
+            <div className="flex items-center gap-2">
+                {/* Search Input */}
+                <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                    <Input
+                        type="text"
+                        placeholder="Search DCs..."
+                        onChange={(e) => onSearch(e.target.value)}
+                        className="h-7 w-64 pl-7 pr-3 text-xs bg-slate-800 border-slate-700 text-slate-300 placeholder:text-slate-500 focus:border-brand focus:ring-brand"
+                    />
+                </div>
+
+                {/* Column Manager */}
+                {columns && onColumnsChange && (
+                    <ColumnManager columns={columns} onColumnsChange={onColumnsChange} />
+                )}
             </div>
         </div>
     )

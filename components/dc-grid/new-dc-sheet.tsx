@@ -111,7 +111,7 @@ export function NewDCSheet() {
                     </div>
                 </SheetHeader>
 
-                <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar bg-[#0B1120]">
+                <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar bg-[#202124]">
                     <div className="space-y-8 max-w-[1100px] mx-auto">
 
                         {/* Supplier Info Section */}

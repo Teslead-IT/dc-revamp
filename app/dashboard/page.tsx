@@ -169,7 +169,7 @@ const defaultLayout = [
 
 export default function DashboardPage() {
   const { data: user } = useSession()
-  const { setTitle } = useHeaderStore()
+  const { setTitle, setTabs } = useHeaderStore()
   const [layout, setLayout] = useState(defaultLayout)
   const [containerWidth, setContainerWidth] = useState(1200)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -179,7 +179,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setTitle("Home")
-  }, [setTitle])
+    setTabs([]) // Clear tabs when navigating to dashboard
+  }, [setTitle, setTabs])
 
   // Load widget configuration from localStorage
   useEffect(() => {
@@ -258,14 +259,14 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="h-full overflow-auto bg-[#0B1120]"
+      className="h-full overflow-auto bg-[#202124]"
       style={{
         backgroundImage: 'radial-gradient(#1e293b 1px, transparent 1px)',
         backgroundSize: '20px 20px'
       }}
     >
       {/* FIXED HEADER SECTION */}
-      <div className="sticky top-0 z-10 bg-[#0B1120]/95 backdrop-blur-sm border-b border-slate-900 pb-3">
+      <div className="sticky top-0 z-10 bg-[#202124]/95 backdrop-blur-sm border-b border-slate-900 pb-3">
         {/* Welcome Section with Three-Dot Menu */}
         <div className="px-4 pt-3 pb-2 flex items-start justify-between">
           <div>

@@ -26,6 +26,7 @@ import { DCContextMenu } from "./dc-context-menu"
 import { useHeaderStore } from "@/hooks/use-header-store"
 import { DCDeleteDialog } from "./dc-delete-dialog"
 import { toast } from "sonner"
+import type { ColumnConfig } from "./column-manager"
 
 // Types definitions should ideally be shared
 interface FilterModel {
@@ -56,6 +57,9 @@ export default function DCGrid() {
 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<any>(null)
+
+    // Column configuration state
+    const [columnConfigs, setColumnConfigs] = useState<ColumnConfig[]>([])
 
     const handleTrashClick = (item: any) => {
         setDeleteTarget(item)
@@ -108,11 +112,57 @@ export default function DCGrid() {
             { label: "DC Templates", value: "templates" },
             { label: "DC Groups", value: "groups" }
         ])
-    }, [])
+    }, [setTitle, setTabs])
+
+    // Initialize column configs on grid ready
+    useEffect(() => {
+        if (gridApi && columnConfigs.length === 0) {
+            const cols = gridApi.getColumns() || []
+            const configs: ColumnConfig[] = cols
+                .filter((col: any) => col.getColId() !== 'actions')
+                .map((col: any) => ({
+                    field: col.getColId(),
+                    headerName: col.getColDef().headerName || col.getColId(),
+                    type: 'text',
+                    width: col.getActualWidth(),
+                    visible: col.isVisible(),
+                    custom: false
+                }))
+
+            // Load saved custom columns
+            const saved = localStorage.getItem('dcGridColumnConfigs')
+            if (saved) {
+                try {
+                    const savedConfigs: ColumnConfig[] = JSON.parse(saved)
+                    const customCols = savedConfigs.filter(c => c.custom)
+                    setColumnConfigs([...configs, ...customCols])
+                } catch (e) {
+                    setColumnConfigs(configs)
+                }
+            } else {
+                setColumnConfigs(configs)
+            }
+        }
+    }, [gridApi, columnConfigs.length])
+
+    // Handle column config changes
+    const handleColumnConfigsChange = useCallback((newConfigs: ColumnConfig[]) => {
+        setColumnConfigs(newConfigs)
+        localStorage.setItem('dcGridColumnConfigs', JSON.stringify(newConfigs))
+
+        // Apply column visibility
+        if (gridApi) {
+            newConfigs.forEach(config => {
+                const col = gridApi.getColumn(config.field)
+                if (col) {
+                    gridApi.setColumnsVisible([config.field], config.visible)
+                }
+            })
+        }
+    }, [gridApi])
 
     // Updated ColDefs with Pinned Columns
-    const [colDefs] = useState<ColDef[]>([
-
+    const colDefs = useMemo<ColDef[]>(() => [
         {
             field: "actions",
             headerName: "",
@@ -207,7 +257,7 @@ export default function DCGrid() {
                 return params.value ? `₹ ${params.value.toLocaleString()} /-` : ""
             }
         }
-    ]);
+    ], [])
 
     // Grid Options
     const defaultColDef = useMemo<ColDef>(() => ({
@@ -215,9 +265,15 @@ export default function DCGrid() {
         filter: true,
         resizable: true,
         suppressMovable: false,
-        // menuTabs: ['filterMenuTab', 'generalMenuTab'], // REMOVED to fix error #200 (requires Enterprise)
         headerClass: "ag-header-cell-custom cursor-move", // Added cursor-move
         cellClass: "ag-cell-custom",
+        valueFormatter: (params) => {
+            // Default formatter for objects
+            if (params.value != null && typeof params.value === 'object') {
+                return JSON.stringify(params.value)
+            }
+            return params.value
+        }
     }), []);
 
 
@@ -270,7 +326,7 @@ export default function DCGrid() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#0B1120] text-slate-200">
+        <div className="flex flex-col h-full bg-[#202124] text-slate-200">
             <GridHeader
                 activeView={activeView}
                 onViewChange={setActiveView}
@@ -279,6 +335,8 @@ export default function DCGrid() {
                     setPage(0)
                 }}
                 totalCount={totalCount}
+                columns={columnConfigs}
+                onColumnsChange={handleColumnConfigsChange}
             />
 
             <div className="flex-1 relative overflow-hidden">
@@ -413,7 +471,7 @@ export default function DCGrid() {
                 /* 1. Hide Actions Header & Cell Background/Borders (Blend with Page BG) */
                 .ag-header-cell[col-id="actions"], 
                 .ag-cell[col-id="actions"] {
-                    background-color: #0B1120 !important; /* Page Background */
+                    background-color: #202124 !important; /* Page Background */
                     border: none !important;
                 }
                 

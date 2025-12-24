@@ -30,7 +30,7 @@ export default function SettingsPage() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-4xl">
+    <div className="flex flex-col gap-6 p-6 max-w-full bg-[#0B1120] h-full">
       {/* General Settings (Dummy) */}
       <Card className="bg-[#1e293b] border-slate-700">
         <CardHeader>

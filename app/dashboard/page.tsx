@@ -259,14 +259,14 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="h-full overflow-auto bg-[#202124]"
+      className="h-full overflow-auto bg-[#0B1120]"
       style={{
         backgroundImage: 'radial-gradient(#1e293b 1px, transparent 1px)',
         backgroundSize: '20px 20px'
       }}
     >
       {/* FIXED HEADER SECTION */}
-      <div className="sticky top-0 z-10 bg-[#202124]/95 backdrop-blur-sm border-b border-slate-900 pb-3">
+      <div className="sticky top-0 z-10 bg-[#0B1120]/95 backdrop-blur-sm border-b border-slate-900 pb-3">
         {/* Welcome Section with Three-Dot Menu */}
         <div className="px-4 pt-3 pb-2 flex items-start justify-between">
           <div>

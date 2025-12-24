@@ -326,7 +326,9 @@ export default function DCGrid() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#202124] text-slate-200">
+        // <div className="flex flex-col h-full bg-[#202124] text-slate-200">
+                <div className="flex flex-col h-full bg-[#0B1120] text-slate-200">
+
             <GridHeader
                 activeView={activeView}
                 onViewChange={setActiveView}
@@ -471,7 +473,8 @@ export default function DCGrid() {
                 /* 1. Hide Actions Header & Cell Background/Borders (Blend with Page BG) */
                 .ag-header-cell[col-id="actions"], 
                 .ag-cell[col-id="actions"] {
-                    background-color: #202124 !important; /* Page Background */
+                                    background-color: #0B1120 !important; /* Page Background */
+
                     border: none !important;
                 }
                 

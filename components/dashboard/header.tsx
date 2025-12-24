@@ -12,7 +12,7 @@ export function Header() {
   const { title, tabs, activeTab, setActiveTab } = useHeaderStore()
 
   return (
-    <header className="sticky top-0 z-30 flex h-10 items-center justify-between border-b border-slate-800 bg-[#202124] px-3 md:p-8 md:px-10 lg:px-10">
+    <header className="sticky top-0 z-30 flex h-10 items-center justify-between border-b border-slate-800 bg-[#0B1120] px-3 md:p-8 md:px-10 lg:px-10">
       {/* LEFT: Dynamic Title & Tabs */}
       <div className="flex items-center gap-4 h-full">
         {title && <h1 className="text-lg font-semibold text-slate-100 hidden md:block">{title}</h1>}

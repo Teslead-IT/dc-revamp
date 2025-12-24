@@ -39,7 +39,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0B1120]">
+      <div className="flex h-screen items-center justify-center bg-[#202124]">
         <GlowLoader />
       </div>
     )
@@ -50,16 +50,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex h-screen w-screen max-w-full bg-[#0B1120] overflow-hidden">
+    <div className="flex h-screen w-screen max-w-full bg-[#202124] overflow-hidden">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       <div
         className={cn(
-          "flex flex-1 flex-col h-full overflow-hidden transition-all duration-300 ease-in-out bg-[#0B1120]",
+          "flex flex-1 flex-col h-full overflow-hidden transition-all duration-300 ease-in-out bg-[#202124]",
           sidebarCollapsed ? "ml-[72px]" : "ml-64",
         )}
       >
         <Header />
-        <main className="flex-1 overflow-auto bg-[#0B1120]">
+        <main className="flex-1 overflow-auto bg-[#202124]">
           {children}
         </main>
       </div>

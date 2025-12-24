@@ -28,6 +28,16 @@ async function loadSequelize(): Promise<SequelizeType> {
   isInitializing = true
 
   try {
+    // First, try to load pg explicitly to verify it's available
+    let pg
+    try {
+      pg = require('pg')
+      console.log('✅ pg package loaded successfully')
+    } catch (pgError: any) {
+      console.error('❌ Failed to load pg package:', pgError.message)
+      throw new Error('Please install pg package manually: npm install pg')
+    }
+
     // Use require to dynamically load Sequelize at runtime
     // This ensures pg is only loaded when actually connecting to database
     const Sequelize = require("sequelize").Sequelize
@@ -38,6 +48,7 @@ async function loadSequelize(): Promise<SequelizeType> {
       // Production: Use connection string
       sequelize = new Sequelize(process.env.DATABASE_URL, {
         dialect: dialect as any,
+        dialectModule: pg,  // Explicitly pass the pg module
         logging: env === "development" ? console.log : false,
         pool: {
           max: 10,
@@ -66,6 +77,7 @@ async function loadSequelize(): Promise<SequelizeType> {
 
       sequelize = new Sequelize({
         dialect: dialect as any,
+        dialectModule: pg,  // Explicitly pass the pg module
         host: dbHost,
         port: dbPort,
         username: dbUser,
@@ -82,7 +94,7 @@ async function loadSequelize(): Promise<SequelizeType> {
     }
 
     isInitializing = false
-    return sequelize
+    return sequelize!
   } catch (error: any) {
     isInitializing = false
     console.error("❌ Database connection error:", error.message)
@@ -95,9 +107,9 @@ async function loadSequelize(): Promise<SequelizeType> {
  */
 export async function getSequelize(): Promise<SequelizeType> {
   if (!sequelize) {
-    return await loadSequelize()
+    await loadSequelize()
   }
-  return sequelize
+  return sequelize!
 }
 
 /**

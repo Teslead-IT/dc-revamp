@@ -93,8 +93,8 @@ export function NewDCSheet() {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button className="gap-2 bg-brand text-white hover:bg-brand/90 shadow-md transition-all">
-                    <Plus className="h-4 w-4" />
+                <Button className="gap-1.5 h-7 text-xs bg-brand text-white hover:bg-brand/90 shadow-md transition-all px-3">
+                    <Plus className="h-3.5 w-3.5" />
                     New DC
                 </Button>
             </SheetTrigger>

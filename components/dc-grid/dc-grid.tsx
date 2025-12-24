@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useMemo, useState, useRef } from "react"
+import React, { useCallback, useMemo, useState, useRef, useEffect } from "react"
 import { AgGridReact } from "ag-grid-react"
 import {
     ColDef,
@@ -21,6 +21,11 @@ import { OwnerCellRenderer } from "./cell-renderers/owner-cell"
 import { GridHeader } from "./grid-header"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ActionsCellRenderer } from "./cell-renderers/actions-cell"
+import { DCContextMenu } from "./dc-context-menu"
+import { useHeaderStore } from "@/hooks/use-header-store"
+import { DCDeleteDialog } from "./dc-delete-dialog"
+import { toast } from "sonner"
 
 // Types definitions should ideally be shared
 interface FilterModel {
@@ -47,9 +52,34 @@ export default function DCGrid() {
     const [sortModel, setSortModel] = useState<SortModel[]>([])
     const [filterModel, setFilterModel] = useState<FilterModel>({})
 
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; data: any } | null>(null)
+
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [deleteTarget, setDeleteTarget] = useState<any>(null)
+
+    const handleTrashClick = (item: any) => {
+        setDeleteTarget(item)
+        setDeleteDialogOpen(true)
+    }
+
+    const handleConfirmDelete = async () => {
+        // Mock API call to delete
+        // await fetch(`/api/dc/${deleteTarget.id}`, { method: 'DELETE' }) 
+
+        toast.success("Delivery Challan Trashed Successfully", {
+            description: "Moved to recycle bin.",
+        })
+        setDeleteDialogOpen(false)
+        setDeleteTarget(null)
+        // Ideally refetch data:
+        // gridApi?.refreshServerSideStore({ route: [], purge: true }) // If server side
+        // or just force re-render/fetch
+        // invalidate queries...
+    }
+
     // Fetch Data
     const { data, isLoading } = useQuery({
-        queryKey: ['dc-list', page, pageSize, searchTerm, sortModel, filterModel],
+        queryKey: ['dc-list', page, pageSize, searchTerm, sortModel, filterModel, activeView, deleteTarget], // Trigger refetch on delete (simulated)
         queryFn: async () => {
             const res = await fetch('/api/dc', {
                 method: 'POST',
@@ -59,7 +89,8 @@ export default function DCGrid() {
                     endRow: (page + 1) * pageSize,
                     search: searchTerm,
                     sortModel,
-                    filterModel
+                    filterModel,
+                    view: activeView
                 })
             })
             if (!res.ok) throw new Error('Network response was not ok')
@@ -68,17 +99,41 @@ export default function DCGrid() {
         placeholderData: (previousData: any) => previousData
     })
 
+    // Set Dynamic Header
+    const { setTitle, setTabs } = useHeaderStore()
+    useEffect(() => {
+        setTitle("Delivery Challans")
+        setTabs([
+            { label: "Active DCs", value: "active" },
+            { label: "DC Templates", value: "templates" },
+            { label: "DC Groups", value: "groups" }
+        ])
+    }, [])
+
     // Updated ColDefs with Pinned Columns
     const [colDefs] = useState<ColDef[]>([
 
+        {
+            field: "actions",
+            headerName: "",
+            cellRenderer: ActionsCellRenderer,
+            pinned: "left",
+            lockPinned: true,
+            width: 50,
+            cellClass: "flex items-center justify-center p-0 ",
+            suppressHeaderMenuButton: true,
+            suppressMovable: true,
+            lockPosition: "left",
+            resizable: false,
+            sortable: false,
+            filter: false
+        },
         {
             field: "dcNumber",
             headerName: "DC Number",
             pinned: "left", // Pinned Left
             lockPinned: true,
             width: 140,
-            checkboxSelection: true,
-            headerCheckboxSelection: true,
             cellClass: "font-medium text-slate-200"
         },
         {
@@ -194,6 +249,14 @@ export default function DCGrid() {
         }
     }, [filterModel, gridApi]);
 
+    const onCellContextMenu = useCallback((params: any) => {
+        const event = params.event;
+        if (event) {
+            event.preventDefault();
+            setContextMenu({ x: event.clientX, y: event.clientY, data: params.data });
+        }
+    }, []);
+
 
     // Pagination Controls
     const totalCount = data?.rowCount || 0
@@ -218,7 +281,7 @@ export default function DCGrid() {
                 totalCount={totalCount}
             />
 
-            <div className="flex-1 relative border border-slate-800 rounded-md overflow-hidden bg-[#111827]">
+            <div className="flex-1 relative overflow-hidden">
                 <div className="ag-theme-balham-dark h-full w-full custom-ag-grid">
                     <AgGridReact
                         theme="legacy" // Fix error #239
@@ -226,37 +289,42 @@ export default function DCGrid() {
                         rowData={data?.rowData || []}
                         columnDefs={colDefs}
                         defaultColDef={defaultColDef}
-                        // rowSelection="multiple"
+                        // rowSelection="multiple" REMOVED
                         animateRows={true}
                         onGridReady={onGridReady}
                         onSortChanged={onSortChanged}
                         onFilterChanged={onFilterChanged}
+                        onCellContextMenu={onCellContextMenu}
+                        preventDefaultOnContextMenu={true}
                         suppressPaginationPanel={true}
                         tooltipShowDelay={0}
                         getRowId={(params) => params.data.id}
                         overlayLoadingTemplate='<span class="ag-overlay-loading-center">Loading DCs...</span>'
                         popupParent={typeof document !== 'undefined' ? document.body : undefined} // Fix: Dialogs render outside grid container
+                        context={{ onDelete: handleTrashClick }}
                     />
                 </div>
             </div>
 
+            {/* Old context menu removed from here */}
+
             {/* Custom Pagination Footer */}
-            <div className="h-12 border-t border-slate-800 bg-[#0F172A] flex items-center justify-between px-4 z-10 relative">
-                <div className="text-xs text-slate-500">
+            <div className="h-9 border-t border-slate-800 bg-[#0F172A] flex items-center justify-between px-3 z-10 relative">
+                <div className="text-[10px] text-slate-500">
                     Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, totalCount)} of {totalCount} DCs
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={handlePrev}
                         disabled={page === 0 || isLoading}
-                        className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
+                        className="h-6 w-6 text-slate-400 hover:text-white hover:bg-slate-800"
                     >
-                        <ChevronLeft className="h-4 w-4" />
+                        <ChevronLeft className="h-3.5 w-3.5" />
                     </Button>
-                    <span className="text-xs text-slate-400 font-medium px-2">
+                    <span className="text-[10px] text-slate-400 font-medium px-1.5">
                         {page + 1} / {totalPages || 1}
                     </span>
                     <Button
@@ -264,9 +332,9 @@ export default function DCGrid() {
                         size="icon"
                         onClick={handleNext}
                         disabled={page >= totalPages - 1 || isLoading}
-                        className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800"
+                        className="h-6 w-6 text-slate-400 hover:text-white hover:bg-slate-800"
                     >
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-3.5 w-3.5" />
                     </Button>
                 </div>
             </div>
@@ -274,17 +342,28 @@ export default function DCGrid() {
             {/* Injected Styles for AG Grid Customization */}
             <style jsx global>{`
                 .ag-theme-balham-dark {
-                    /* Variable overrides for dark theme */
+                    /* Variable overrides for dark theme - COMPACT ZOHO STYLE */
                     --ag-background-color: #0F172A; /* Darker background */
                     --ag-foreground-color: #94a3b8;
                     --ag-border-color: #1e293b;
                     --ag-header-background-color: #0F172A;
-                    --ag-header-height: 48px;
-                    --ag-row-height: 48px;
+                    --ag-header-height: 32px;  /* REDUCED from 48px */
+                    --ag-row-height: 34px;      /* REDUCED from 48px */
+                    --ag-font-size: 11px;       /* REDUCED from 12px */
+                    --ag-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                     --ag-row-hover-color: #1e293b;
                     --ag-selected-row-background-color: rgba(16, 185, 129, 0.08);
                     --ag-odd-row-background-color: #131b2e; /* Subtle Zebra Stripe */
                     --ag-header-column-separator-display: none; /* Cleaner look without separators */
+                    
+                    /* Show action icon on hover */
+                    .ag-row:hover .actions-icon, .ag-row-selected .actions-icon {
+                        opacity: 1 !important;
+                    }
+                    /* Ensure the actions button inside doesn't have a background to block the view */
+                    .actions-icon:hover {
+                         background-color: transparent !important;
+                    }
                     
                     /* Typography */
                     --ag-font-family: inherit;
@@ -314,19 +393,54 @@ export default function DCGrid() {
                 .ag-cell-custom {
                     display: flex;
                     align-items: center;
-                    border-bottom: 1px solid #1e293b; /* Explicit row borders */
+                    border-bottom: none !important; /* Remove row borders as requested */
                 }
-                /* Remove default outer border */
+                /* Remove default outer border from AG Grid */
                 .ag-root-wrapper {
                      border: none !important;
                 }
-                /* Sticky column refined styles */
-                .ag-pinned-left-header, .ag-pinned-left-cols-container {
-                     border-right: 1px solid #334155;
-                     box-shadow: 4px 0 12px -4px rgba(0,0,0,0.3);
-                     /* z-index: 20; Removed to prevent stacking context fight with popups */
+                
+                /* --- CUTOUT ACTIONS COLUMN STYLES --- */
+                
+                /* --- GLOBAL BORDER REMOVAL FOR "CLEAN" LOOK --- */
+                .ag-row, .ag-cell, .ag-cell-value, .ag-row-even, .ag-row-odd {
+                    border: none !important;
+                    border-bottom: none !important;
+                }
+
+                /* --- CUTOUT ACTIONS COLUMN STYLES --- */
+                
+                /* 1. Hide Actions Header & Cell Background/Borders (Blend with Page BG) */
+                .ag-header-cell[col-id="actions"], 
+                .ag-cell[col-id="actions"] {
+                    background-color: #0B1120 !important; /* Page Background */
+                    border: none !important;
                 }
                 
+                /* 2. Start the "Table" visual at DC Number */
+                .ag-header-cell[col-id="dcNumber"], 
+                .ag-cell[col-id="dcNumber"] {
+                    border-left: 1px solid #334155 !important;
+                }
+                
+                /* 3. Add Top/Bottom Borders to the "Table" part (Header) */
+                .ag-header {
+                    border-bottom: none !important; /* Remove global header border */
+                    background-color: #0F172A;
+                }
+                
+                /* Add top/bottom border to all header cells EXCEPT actions */
+                .ag-header-cell:not([col-id="actions"]) {
+                    border-top: 1px solid #334155 !important;
+                    border-bottom: 1px solid #1e293b !important;
+                }
+
+                /* Sticky column refined styles */
+                .ag-pinned-left-header, .ag-pinned-left-cols-container {
+                     border-right: none !important; 
+                     box-shadow: none !important; 
+                }
+
                 /* Force AG Grid Popups (menus, tooltips) to be on top of everything */
                 :global(.ag-popup) {
                     z-index: 99999 !important;
@@ -337,6 +451,22 @@ export default function DCGrid() {
                      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
                 }
             `}</style>
+
+            {contextMenu && (
+                <DCContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    onClose={() => setContextMenu(null)}
+                    data={contextMenu.data}
+                    onTrash={() => handleTrashClick(contextMenu.data)}
+                />
+            )}
+
+            <DCDeleteDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                onConfirm={handleConfirmDelete}
+            />
         </div>
     )
 }

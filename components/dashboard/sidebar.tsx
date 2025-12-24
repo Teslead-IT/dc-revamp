@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import { useLogout } from "@/hooks/use-auth"
 import { motion, AnimatePresence } from "framer-motion"
+import { useThemeStore } from "@/hooks/use-theme-store"
 
 interface NavItem {
   label: string
@@ -39,25 +40,11 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "DASHBOARD", href: "/dashboard", icon: LayoutDashboard },
-  {
-    label: "STORE",
-    icon: Store,
-    children: [
-      { label: "ALL DC", href: "/dashboard/dc/all", icon: LayoutGrid },
-      { label: "DRAFT DC", href: "/dashboard/dc/draft", icon: FileText },
-      { label: "OPEN DC", href: "/dashboard/dc/open", icon: FolderOpen },
-      { label: "PARTIAL DC", href: "/dashboard/dc/partial", icon: Clock },
-      { label: "CLOSED DC", href: "/dashboard/dc/closed", icon: CheckCircle },
-      { label: "CANCELLED DC", href: "/dashboard/dc/cancelled", icon: XCircle },
-      { label: "DELETED DC", href: "/dashboard/dc/deleted", icon: Trash2 },
-      { label: "DEPT OVERALL DC", href: "/dashboard/dc/dept-overall", icon: Building2 },
-    ],
-  },
+  { label: "DELIVERY CHALLANS", href: "/dashboard/dc/all", icon: LayoutGrid },
   { label: "REPORT", href: "/dashboard/report", icon: BarChart3 },
   { label: "PARTYS", href: "/dashboard/partys", icon: UsersIcon },
   { label: "ITEMS", href: "/dashboard/items", icon: Package },
   { label: "USERS", href: "/dashboard/users", icon: UsersIcon },
-  { label: "SETTINGS", href: "/dashboard/settings", icon: Settings },
 ]
 
 interface SidebarProps {
@@ -67,6 +54,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
+  const { currentLineArt } = useThemeStore()
   // Open STORE menu by default or if a child is active
   const [openMenus, setOpenMenus] = useState<string[]>([])
   const logoutMutation = useLogout()
@@ -164,16 +152,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                     <button
                       onClick={() => !collapsed && toggleMenu(item.label)}
                       className={cn(
-                        "group flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                        "group flex w-full items-center justify-between rounded-md px-2.5 py-2 text-sm font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-brand",
                         isChildActive(item.children)
-                          ? "bg-slate-800 text-white"
+                          ? "bg-slate-800 text-slate-100"
                           : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
                       )}
                       title={collapsed ? item.label : undefined}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={cn("flex items-center justify-center transition-colors", isMainActive ? "text-brand-highlight" : "text-slate-500 group-hover:text-slate-300")}>
-                          <item.icon className="h-5 w-5" strokeWidth={isMainActive ? 2.5 : 2} />
+                      <div className="flex items-center gap-2.5">
+                        <div className={cn("flex items-center justify-center transition-colors", isMainActive ? "text-brand-highlight" : "text-slate-400 group-hover:text-slate-300")}>
+                          <item.icon className="h-4 w-4" strokeWidth={isMainActive ? 2.5 : 2} />
                         </div>
                         <AnimatePresence>
                           {!collapsed && (
@@ -238,9 +226,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   <Link
                     href={item.href!}
                     className={cn(
-                      "group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                      "group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-brand",
                       isActive(item.href!)
-                        ? "bg-slate-800 text-white relative overflow-hidden"
+                        ? "bg-slate-800 text-slate-100 relative overflow-hidden"
                         : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
                     )}
                     title={collapsed ? item.label : undefined}
@@ -253,8 +241,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                       />
                     )}
 
-                    <div className={cn("flex items-center justify-center z-10", isActive(item.href!) ? "text-brand-highlight" : "text-slate-500 group-hover:text-slate-300")}>
-                      <item.icon className="h-5 w-5" strokeWidth={isActive(item.href!) ? 2.5 : 2} />
+                    <div className={cn("flex items-center justify-center z-10", isActive(item.href!) ? "text-brand-highlight" : "text-slate-400 group-hover:text-slate-300")}>
+                      <item.icon className="h-4 w-4" strokeWidth={isActive(item.href!) ? 2.5 : 2} />
                     </div>
 
                     <AnimatePresence>
@@ -277,9 +265,20 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </ul>
       </nav>
 
+      {/* Line Art Background (Bottom) */}
+      {!collapsed && currentLineArt && (
+        <div className="absolute bottom-8 left-0 w-full h-[500px] overflow-hidden pointer-events-none z-0 opacity-80 user-select-none flex items-end justify-center">
+          <img
+            src={currentLineArt}
+            alt=""
+            className="w-full h-full object-contain object-bottom"
+          />
+        </div>
+      )}
+
       {/* Footer */}
-      <div className="border-t border-slate-800 bg-[#0B1120] p-4">
-        <AnimatePresence mode="wait">
+      <div className="border-t border-slate-800 bg-transparent p-4 relative z-10">
+        {/* <AnimatePresence mode="wait">
           {!collapsed ? (
             <motion.div
               key="full-footer"
@@ -302,13 +301,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               <Image src="/single-logo.png" alt="Icon" width={24} height={24} className="opacity-80 object-contain" />
             </motion.div>
           )}
-        </AnimatePresence>
+        </AnimatePresence> */}
 
         <button
           onClick={() => logoutMutation.mutate()}
           disabled={logoutMutation.isPending}
           className={cn(
-            "group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-400",
+            "group flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-slate-400 transition-all duration-200 hover:bg-red-500/10 hover:text-red-400",
             collapsed && "justify-center"
           )}
           title="Logout"

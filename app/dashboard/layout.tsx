@@ -50,16 +50,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#0B1120] overflow-hidden">
+    <div className="flex h-screen w-screen max-w-full bg-[#0B1120] overflow-hidden">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       <div
         className={cn(
-          "flex flex-1 flex-col h-full overflow-hidden transition-all duration-300 ease-in-out",
+          "flex flex-1 flex-col h-full overflow-hidden transition-all duration-300 ease-in-out bg-[#0B1120]",
           sidebarCollapsed ? "ml-[72px]" : "ml-64",
         )}
       >
         <Header />
-        <main className="flex-1 overflow-hidden p-4 lg:p-6 bg-[#0B1120]">
+        <main className="flex-1 overflow-auto bg-[#0B1120]">
           {children}
         </main>
       </div>

@@ -36,6 +36,7 @@ export async function initializeDatabase(): Promise<DBConnection> {
     db = {
       sequelize,
     }
+    console.log("DB>>>>>>>>>>>>", db);
 
     return db
   } catch (error) {

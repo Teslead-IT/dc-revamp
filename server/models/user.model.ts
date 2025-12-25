@@ -1,7 +1,7 @@
 import { DataTypes, Model, Optional, Sequelize } from "sequelize"
 
 export interface UserAttributes {
-  id: string
+  id: number
   userId: string
   email: string
   name: string
@@ -16,7 +16,7 @@ export interface UserAttributes {
 interface UserCreationAttributes extends Optional<UserAttributes, "id" | "createdAt" | "updatedAt" | "deletedAt"> {}
 
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
-  public id!: string
+  public id!: number
   public userId!: string
   public email!: string
   public name!: string
@@ -37,15 +37,15 @@ export function initializeUserModel(sequelize: Sequelize): typeof User {
   User.init(
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
         primaryKey: true,
         allowNull: false,
-        unique: true,
+   
       },
       userId: {
         type: DataTypes.STRING(300),
-        allowNull: false,
+        allowNull: false,        
         unique: true,
       },
       email: {

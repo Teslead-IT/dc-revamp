@@ -17,7 +17,8 @@ import "../server/utils/load-env"
 import { initializeDatabase } from "../server/database"
 import { syncDatabase, singleModelSync, initializeAssociations } from "../server/models"
 import User from "../server/models/user.model"
-import DeliveryChallan from "../server/models/deliveryChallan.model"
+import PartyDetails from "../server/models/partyDetails.model"
+import DraftDC from "../server/models/draftDC.model"
 
 const args = process.argv.slice(2)
 const command = args[0]
@@ -25,7 +26,8 @@ const modelName = args[1]
 
 const models: Record<string, any> = {
   User,
-  DeliveryChallan,
+  PartyDetails,
+  DraftDC,
 }
 
 async function main() {

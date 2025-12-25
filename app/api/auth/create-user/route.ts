@@ -22,7 +22,7 @@ import { userCreateSchema } from "@/server/validations"
  */
 export async function POST(request: NextRequest) {
   try {
-    await initializeDatabase()
+    // await initializeDatabase()
 
     // Check authentication
     const auth = await authMiddleware(request)
@@ -37,6 +37,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+
+
+    console.log("Body", body)
 
     // Validate input
     const validation = validateInput(userCreateSchema, {

@@ -1,5 +1,6 @@
 import User, { initializeUserModel } from "./user.model"
-import DeliveryChallan, { initializeDeliveryChallanModel } from "./deliveryChallan.model"
+import PartyDetails, { initializePartyDetailsModel } from "./partyDetails.model"
+import DraftDC, { initializeDraftDCModel } from "./draftDC.model"
 import type { Sequelize } from "sequelize"
 
 type SyncOptions = {
@@ -9,40 +10,28 @@ type SyncOptions = {
 
 let isInitialized = false
 
-/**
- * Initialize all models with sequelize instance
- * This must be called once before using any models
- */
+
 export function initializeModels(sequelize: Sequelize) {
   if (isInitialized) {
     return
   }
 
   initializeUserModel(sequelize)
-  initializeDeliveryChallanModel(sequelize, User)
+  initializePartyDetailsModel(sequelize)
+  initializeDraftDCModel(sequelize)
 
   isInitialized = true
 }
 
-/**
- * Initialize model associations
- */
+
 export function initializeAssociations() {
   // User associations
-  User.hasMany(DeliveryChallan, {
-    foreignKey: "createdBy",
-    as: "deliveryChalans",
-  })
-
-  DeliveryChallan.belongsTo(User, {
-    foreignKey: "createdBy",
-    as: "creator",
-  })
+  // User.hasMany(DeliveryChallan, {
+  //   foreignKey: "createdBy",
+  //   as: "deliveryChalans",
+  // })
 }
 
-/**
- * Syncs the Sequelize models in order of dependencies
- */
 export async function syncDatabase(options: SyncOptions = { alter: true }) {
   try {
     console.log("🔁 Starting database sync...")
@@ -51,9 +40,13 @@ export async function syncDatabase(options: SyncOptions = { alter: true }) {
     await User.sync(options)
     console.log("✅ User table synced successfully.")
 
-    // 2. App tables (with foreign keys)
-    await DeliveryChallan.sync(options)
-    console.log("✅ DeliveryChallan table synced successfully.")
+  
+
+    await PartyDetails.sync(options)
+    console.log("✅ PartyDetails table synced successfully.")
+
+    await DraftDC.sync(options)
+    console.log("✅ DraftDC table synced successfully.")
 
     console.log("🎉 Database sync completed successfully.")
   } catch (error) {
@@ -61,9 +54,6 @@ export async function syncDatabase(options: SyncOptions = { alter: true }) {
   }
 }
 
-/**
- * Sync a single model
- */
 export const singleModelSync = async (model: any, options: SyncOptions = { alter: true }) => {
   try {
     console.log(`🔁 Syncing model: ${model.name}`)
@@ -74,9 +64,10 @@ export const singleModelSync = async (model: any, options: SyncOptions = { alter
   }
 }
 
-// Export models
-export { User, DeliveryChallan }
+export { User, PartyDetails, DraftDC }
 
 // Export types
-export type { UserAttributes } from "./user.model"
-export type { DeliveryChallanAttributes } from "./deliveryChallan.model"
+// export type { UserAttributes } from "./user.model"
+// export type { DeliveryChallanAttributes } from "./deliveryChallan.model"
+// export type { PartyDetailsAttributes } from "./partyDetails.model"
+// export type { DraftDCAttributes } from "./draftDC.model"

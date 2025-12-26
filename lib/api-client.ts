@@ -14,6 +14,109 @@ interface ApiResponse<T = any> {
     errors?: Record<string, string[]>;
 }
 
+// ============= Supplier Types =============
+
+/**
+ * Supplier data structure for create requests
+ */
+export interface CreateSupplierData {
+    partyName: string;
+    addressLine1: string;
+    addressLine2: string;
+    city: string;
+    state: string;
+    stateCode: number;
+    pinCode: number;
+    gstinNumber: string;
+    email: string;
+    phone: string;
+}
+
+/**
+ * Supplier data structure from API responses
+ * Includes id and timestamps
+ */
+export interface Supplier extends CreateSupplierData {
+    id: number;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+// ============= Draft DC Items Types =============
+
+/**
+ * Individual item in a draft DC
+ */
+export interface DraftDCItem {
+    itemName: string
+    itemDescription: string
+    uom: string
+    quantity: number
+    weightPerUnit: number
+    totalWeight: number
+    ratePerEach: number
+    squareFeetPerUnit: number
+    totalSquareFeet: number
+    remarks: string
+    projectName: string
+    projectIncharge: string
+    notes: string
+}
+
+/**
+ * Draft DC Items request payload for create
+ */
+export interface CreateDraftDCItemsData {
+    draftId: string
+    partyId: string
+    items: DraftDCItem[]
+}
+
+/**
+ * Draft DC Items response from API
+ * Includes id and timestamps
+ */
+export interface DraftDCItemsResponse extends CreateDraftDCItemsData {
+    id: number
+    createdAt?: string
+    updatedAt?: string
+}
+
+// ============= Draft DC Types =============
+
+/**
+ * DC Type enum
+ */
+export type DCType = 'SPM' | 'QC' | 'VALVE'
+
+/**
+ * Draft DC data structure for create requests
+ */
+export interface CreateDraftDCData {
+    partyId: string
+    vehicleNo: string
+    process: string
+    totalDispatchedQuantity: number
+    totalRate: number
+    showWeight: boolean
+    showSquareFeet: boolean
+    notes: string
+    updatedBy: string
+    dcType: DCType
+    dcDate: string
+}
+
+/**
+ * Draft DC data structure from API responses
+ * Includes id and timestamps
+ */
+export interface DraftDC extends CreateDraftDCData {
+    id: number
+    createdAt?: string
+    updatedAt?: string
+}
+
+
 class ExternalApiClient {
     private baseUrl: string;
     private token: string | null = null;
@@ -239,35 +342,88 @@ class ExternalApiClient {
      * Get all suppliers
      */
     async getSuppliers() {
-        return this.get('/suppliers');
+        return this.get('/api/suppliers');
     }
 
     /**
      * Get supplier by ID
      */
     async getSupplier(id: string | number) {
-        return this.get(`/suppliers/${id}`);
+        return this.get(`/api/suppliers/${id}`);
     }
 
     /**
      * Create supplier
      */
-    async createSupplier(supplierData: any) {
-        return this.post('/suppliers', supplierData);
+    async createSupplier(supplierData: CreateSupplierData) {
+        return this.post('/api/suppliers', supplierData);
     }
 
     /**
      * Update supplier
      */
-    async updateSupplier(id: string | number, supplierData: any) {
-        return this.put(`/suppliers/${id}`, supplierData);
+    async updateSupplier(id: string | number, supplierData: Partial<CreateSupplierData>) {
+        return this.put(`/api/suppliers/${id}`, supplierData);
     }
 
     /**
      * Delete supplier
      */
     async deleteSupplier(id: string | number) {
-        return this.delete(`/suppliers/${id}`);
+        return this.delete(`/api/suppliers/${id}`);
+    }
+
+    // ============= Draft DC Items Methods =============
+
+    /**
+     * Get all draft DC items
+     */
+    async getDraftDCItems() {
+        return this.get('/api/draft-dc-items');
+    }
+
+    /**
+     * Create draft DC items
+     */
+    async createDraftDCItems(draftData: CreateDraftDCItemsData) {
+        return this.post('/api/draft-dc-items', draftData);
+    }
+
+    // ============= Draft DC Methods =============
+
+    /**
+     * Get all draft DCs
+     */
+    async getDraftDCs() {
+        return this.get('/api/draft-dc');
+    }
+
+    /**
+     * Get draft DC by ID
+     */
+    async getDraftDC(id: string | number) {
+        return this.get(`/api/draft-dc/${id}`);
+    }
+
+    /**
+     * Create draft DC
+     */
+    async createDraftDC(draftData: CreateDraftDCData) {
+        return this.post('/api/draft-dc', draftData);
+    }
+
+    /**
+     * Update draft DC
+     */
+    async updateDraftDC(id: string | number, draftData: Partial<CreateDraftDCData>) {
+        return this.put(`/api/draft-dc/${id}`, draftData);
+    }
+
+    /**
+     * Delete draft DC
+     */
+    async deleteDraftDC(id: string | number) {
+        return this.delete(`/api/draft-dc/${id}`);
     }
 }
 

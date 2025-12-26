@@ -8,7 +8,8 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowRight, Loader2, Lock, ArrowLeft, Eye, EyeOff, CheckCircle } from "lucide-react"
+import { ArrowRight, Loader2, ArrowLeft, Eye, EyeOff, CheckCircle } from "lucide-react"
+import { externalApi } from "@/lib/api-client"
 
 interface LoginProps {
   onLoginSuccess?: () => void
@@ -34,10 +35,10 @@ export function Login({ onLoginSuccess }: LoginProps) {
           // Invalidate and refetch session to ensure user data is cached
           await queryClient.invalidateQueries({ queryKey: ["session"] })
           await queryClient.refetchQueries({ queryKey: ["session"] })
-          
+
           // Call callback if provided
           onLoginSuccess?.()
-          
+
           // Force redirect to dashboard
           router.push("/dashboard")
         } catch (err) {
@@ -56,19 +57,15 @@ export function Login({ onLoginSuccess }: LoginProps) {
     if (userId.trim()) {
       setIsLoading(true)
       try {
-        const response = await fetch("/api/auth/verify-user", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId: userId.trim() }),
-        })
-        const data = await response.json()
+        const data = await externalApi.post('/api/auth/verify-user', { userId: userId.trim() })
         if (data.success) {
           setStep("password")
         } else {
           setError(data.message || "User ID not found")
         }
-      } catch (err) {
-        setError("Failed to verify user ID. Please try again.")
+      } catch (err: any) {
+        setError(err?.message || "Failed to verify user ID. Please try again.")
+        console.error("Verify user error:", err)
       } finally {
         setIsLoading(false)
       }
@@ -82,19 +79,15 @@ export function Login({ onLoginSuccess }: LoginProps) {
     if (password) {
       setIsLoading(true)
       try {
-        const response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, password }),
-        })
-        const data = await response.json()
+        const data = await externalApi.login(userId, password)
         if (data.success) {
           setStep("loading")
         } else {
           setError(data.message || "Login failed. Please try again.")
         }
-      } catch (err) {
-        setError("Failed to login. Please try again.")
+      } catch (err: any) {
+        setError(err?.message || "Failed to login. Please try again.")
+        console.error("Login error:", err)
       } finally {
         setIsLoading(false)
       }
@@ -112,7 +105,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center bg-slate-900 p-4 md:p-8">
       <div className="relative w-full max-w-md rounded-2xl bg-black p-8 shadow-[0_8px_18px_-4px_rgba(0,0,0,0.6)]">
-        
+
         {/* Logo - Always visible at top */}
         <div className="absolute h-14 w-14">
           <Image src="/Teslead-Logo.png" alt="Logo" fill className="object-contain drop-shadow-lg" />

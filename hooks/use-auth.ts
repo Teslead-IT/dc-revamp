@@ -1,15 +1,26 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { authApi } from "@/lib/api-client"
+import { externalApi } from "@/lib/api-client"
 import { useRouter } from "next/navigation"
 
 export function useSession() {
   return useQuery({
     queryKey: ["session"],
     queryFn: async () => {
-      const res = await authApi.getSession()
-      return res.data?.user || null
+      try {
+        // Check if token exists
+        const token = externalApi.getToken()
+        if (!token) return null
+
+        // Call backend to get real user session data
+        const res = await externalApi.getSession()
+        return res.data?.user || null
+      } catch (error) {
+        // If session fetch fails, clear token and return null
+        console.error("Session fetch error:", error)
+        return null
+      }
     },
   })
 }
@@ -17,7 +28,7 @@ export function useSession() {
 export function useVerifyUserId() {
   return useMutation({
     mutationFn: async (userId: string) => {
-      const res = await authApi.verifyUserId(userId)
+      const res = await externalApi.post('/api/auth/verify-user', { userId })
       if (!res.success) throw new Error(res.message)
       return res.data
     },
@@ -30,7 +41,7 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
-      const res = await authApi.verifyPassword(userId, password)
+      const res = await externalApi.login(userId, password)
       if (!res.success) throw new Error(res.message)
       return res.data
     },
@@ -46,7 +57,7 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async () => {
-      await authApi.logout()
+      await externalApi.logout()
     },
     onSuccess: () => {
       queryClient.setQueryData(["session"], null)

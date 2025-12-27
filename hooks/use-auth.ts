@@ -3,10 +3,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { externalApi } from "@/lib/api-client"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+
+// Centralized query keys for auth
+export const authKeys = {
+  all: ['auth'] as const,
+  session: () => [...authKeys.all, 'session'] as const,
+}
 
 export function useSession() {
   return useQuery({
-    queryKey: ["session"],
+    queryKey: authKeys.session(),
     queryFn: async () => {
       try {
         // Check if token exists
@@ -22,6 +29,10 @@ export function useSession() {
         return null
       }
     },
+    // Keep session fresh for 5 minutes
+    staleTime: 5 * 60 * 1000,
+    // Retry session fetching
+    retry: 1,
   })
 }
 
@@ -31,6 +42,9 @@ export function useVerifyUserId() {
       const res = await externalApi.post('/api/auth/verify-user', { userId })
       if (!res.success) throw new Error(res.message)
       return res.data
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to verify user ID")
     },
   })
 }
@@ -45,8 +59,19 @@ export function useLogin() {
       if (!res.success) throw new Error(res.message)
       return res.data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["session"] })
+    onSuccess: (data) => {
+      // Update session cache immediately
+      if (data?.user) {
+        queryClient.setQueryData(authKeys.session(), data.user)
+      }
+
+      // Invalidate to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: authKeys.session() })
+
+      toast.success("Login successful")
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Login failed")
     },
   })
 }
@@ -60,8 +85,50 @@ export function useLogout() {
       await externalApi.logout()
     },
     onSuccess: () => {
-      queryClient.setQueryData(["session"], null)
+      // Clear all cached data on logout
+      queryClient.clear()
+
+      // Set session to null
+      queryClient.setQueryData(authKeys.session(), null)
+
+      toast.success("Logged out successfully")
+      router.push("/login")
+    },
+    onError: (error: any) => {
+      // Still clear cache and redirect even on error
+      queryClient.clear()
+      queryClient.setQueryData(authKeys.session(), null)
+
+      toast.error(error.message || "Logout failed")
       router.push("/login")
     },
   })
 }
+
+/**
+ * Hook to check if user is authenticated
+ */
+export function useIsAuthenticated() {
+  const { data: user, isLoading } = useSession()
+  return {
+    isAuthenticated: !!user,
+    isLoading,
+    user,
+  }
+}
+
+/**
+ * Hook to require authentication
+ * Redirects to login if not authenticated
+ */
+export function useRequireAuth() {
+  const router = useRouter()
+  const { isAuthenticated, isLoading, user } = useIsAuthenticated()
+
+  if (!isLoading && !isAuthenticated) {
+    router.push('/login')
+  }
+
+  return { isAuthenticated, isLoading, user }
+}
+

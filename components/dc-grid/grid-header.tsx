@@ -46,14 +46,14 @@ export function GridHeader({ onSearch, activeView, onViewChange, totalCount, col
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56 bg-slate-900 border-slate-700 text-slate-300" align="end">
-                        <DropdownMenuItem className="focus:bg-slate-800 focus:text-white cursor-pointer" onClick={() => onViewChange("All DCs")}>
+                        <DropdownMenuItem className="focus:bg-slate-800 focus:text-white cursor-pointer" onClick={() => onViewChange("All")}>
                             All DCs
                         </DropdownMenuItem>
                         <DropdownMenuItem className="focus:bg-slate-800 focus:text-white cursor-pointer" onClick={() => onViewChange("My DCs")}>
                             My DCs
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-700" />
-                        <DropdownMenuItem className="focus:bg-slate-800 focus:text-white cursor-pointer" onClick={() => onViewChange("Draft DCs")}>
+                        <DropdownMenuItem className="focus:bg-slate-800 focus:text-white cursor-pointer" onClick={() => onViewChange("Draft")}>
                             Draft DCs
                         </DropdownMenuItem>
                         <DropdownMenuItem className="focus:bg-slate-800 focus:text-white cursor-pointer" onClick={() => onViewChange("Open DCs")}>

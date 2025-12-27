@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { Eye, Edit, Trash2, Copy, ExternalLink, Archive, Mail, Palette } from "lucide-react"
 
 interface DCContextMenuProps {
@@ -13,6 +14,7 @@ interface DCContextMenuProps {
 
 export function DCContextMenu({ x, y, onClose, data, onTrash }: DCContextMenuProps) {
     const ref = useRef<HTMLDivElement>(null)
+    const router = useRouter()
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -27,6 +29,13 @@ export function DCContextMenu({ x, y, onClose, data, onTrash }: DCContextMenuPro
         }
     }, [onClose])
 
+    const handleViewDetails = () => {
+        if (data?.draftId) {
+            router.push(`/dashboard/dc/draft/${data.draftId}`)
+        }
+        onClose()
+    }
+
     return (
         <div
             ref={ref}
@@ -34,7 +43,7 @@ export function DCContextMenu({ x, y, onClose, data, onTrash }: DCContextMenuPro
             style={{ top: y, left: x }}
             onContextMenu={(e) => e.preventDefault()} // Prevent native menu inside custom menu
         >
-            <MenuItem icon={Eye} label="View Details" />
+            <MenuItem icon={Eye} label="View Details" onClick={handleViewDetails} />
             <MenuItem icon={ExternalLink} label="Open in New Tab" />
             <div className="my-1 h-px bg-slate-700" />
             <MenuItem icon={Copy} label="Copy Link" />

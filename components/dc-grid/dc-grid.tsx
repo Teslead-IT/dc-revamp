@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useCallback, useMemo, useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { AgGridReact } from "ag-grid-react"
 import {
     ColDef,
@@ -25,8 +26,8 @@ import { ActionsCellRenderer } from "./cell-renderers/actions-cell"
 import { DCContextMenu } from "./dc-context-menu"
 import { useHeaderStore } from "@/hooks/use-header-store"
 import { DCDeleteDialog } from "./dc-delete-dialog"
-import { toast } from "sonner"
 import type { ColumnConfig } from "./column-manager"
+import { useDraftDCs, useDraftDCDetails, useDeleteDraftDC } from "@/hooks/use-draft-dc"
 
 // Types definitions should ideally be shared
 interface FilterModel {
@@ -38,7 +39,11 @@ interface SortModel {
     sort: 'asc' | 'desc';
 }
 
+
 export default function DCGrid() {
+    const router = useRouter()
+    const deleteDraftDC = useDeleteDraftDC()
+
     // Grid State
     const gridRef = useRef<AgGridReact>(null)
     const [gridApi, setGridApi] = useState<GridApi | null>(null)
@@ -48,7 +53,14 @@ export default function DCGrid() {
     const [page, setPage] = useState(0)
     const [pageSize, setPageSize] = useState(20)
     const [searchTerm, setSearchTerm] = useState("")
-    const [activeView, setActiveView] = useState("All DC")
+
+    // Load activeView from localStorage on mount
+    const [activeView, setActiveView] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('dc-grid-active-view') || 'All'
+        }
+        return 'All'
+    })
 
     const [sortModel, setSortModel] = useState<SortModel[]>([])
     const [filterModel, setFilterModel] = useState<FilterModel>({})
@@ -61,47 +73,56 @@ export default function DCGrid() {
     // Column configuration state
     const [columnConfigs, setColumnConfigs] = useState<ColumnConfig[]>([])
 
+    // Save activeView to localStorage whenever it changes
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('dc-grid-active-view', activeView)
+        }
+    }, [activeView])
+
+
+
     const handleTrashClick = (item: any) => {
         setDeleteTarget(item)
         setDeleteDialogOpen(true)
     }
 
     const handleConfirmDelete = async () => {
-        // Mock API call to delete
-        // await fetch(`/api/dc/${deleteTarget.id}`, { method: 'DELETE' }) 
+        if (!deleteTarget?.draftId) {
+            throw new Error('No draft ID found')
+        }
 
-        toast.success("Delivery Challan Trashed Successfully", {
-            description: "Moved to recycle bin.",
-        })
+        // Use the actual delete hook
+        await deleteDraftDC.mutateAsync(deleteTarget.draftId)
+
         setDeleteDialogOpen(false)
         setDeleteTarget(null)
-        // Ideally refetch data:
-        // gridApi?.refreshServerSideStore({ route: [], purge: true }) // If server side
-        // or just force re-render/fetch
-        // invalidate queries...
     }
 
-    // Fetch Data
-    const { data, isLoading } = useQuery({
-        queryKey: ['dc-list', page, pageSize, searchTerm, sortModel, filterModel, activeView, deleteTarget], // Trigger refetch on delete (simulated)
+    // Fetch Draft DCs with pagination
+    const { data: draftDetailsData, isLoading: isDraftLoading } = useDraftDCDetails(
+        page + 1, // API uses 1-indexed pages
+        pageSize,
+        activeView === 'Draft'
+    )
+
+    // Fetch Regular DCs (DISABLED - API not implemented yet)
+    // When the /api/dc endpoint is ready, enable this query
+    const { data: regularData, isLoading: isRegularLoading } = useQuery({
+        queryKey: ['dc-list', page, pageSize, searchTerm, sortModel, filterModel, activeView, deleteTarget],
         queryFn: async () => {
-            const res = await fetch('/api/dc', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    startRow: page * pageSize,
-                    endRow: (page + 1) * pageSize,
-                    search: searchTerm,
-                    sortModel,
-                    filterModel,
-                    view: activeView
-                })
-            })
-            if (!res.ok) throw new Error('Network response was not ok')
-            return res.json()
+            // This endpoint doesn't exist yet - returning empty data
+            return { rowData: [], lastRow: 0, rowCount: 0 }
         },
+        enabled: false, // DISABLED to prevent 404 errors
         placeholderData: (previousData: any) => previousData
     })
+
+    // Combine data based on activeView
+    const data = activeView === 'Draft'
+        ? { rowData: draftDetailsData?.data || [], lastRow: draftDetailsData?.meta?.total || 0, rowCount: draftDetailsData?.meta?.total || 0 }
+        : (regularData || { rowData: [], lastRow: 0, rowCount: 0 })
+    const isLoading = activeView === 'Draft' ? isDraftLoading : isRegularLoading
 
     // Set Dynamic Header
     const { setTitle, setTabs } = useHeaderStore()
@@ -162,102 +183,202 @@ export default function DCGrid() {
     }, [gridApi])
 
     // Updated ColDefs with Pinned Columns
-    const colDefs = useMemo<ColDef[]>(() => [
-        {
-            field: "actions",
-            headerName: "",
-            cellRenderer: ActionsCellRenderer,
-            pinned: "left",
-            lockPinned: true,
-            width: 50,
-            cellClass: "flex items-center justify-center p-0 ",
-            suppressHeaderMenuButton: true,
-            suppressMovable: true,
-            lockPosition: "left",
-            resizable: false,
-            sortable: false,
-            filter: false
-        },
-        {
-            field: "dcNumber",
-            headerName: "DC Number",
-            pinned: "left", // Pinned Left
-            lockPinned: true,
-            width: 140,
-            cellClass: "font-medium text-slate-200"
-        },
-        {
-            field: "status",
-            headerName: "Status",
-            cellRenderer: StatusCellRenderer,
-            width: 130,
-            pinned: "left", // Pinned Left
-            lockPinned: true, // Prevent unpinning logic if desired, keeping it simple
-            cellClass: "flex items-center"
-        },
-        {
-            field: "dispatchDate",
-            headerName: "Dispatch Date",
-            valueFormatter: (params) => {
-                if (!params.value) return ""
-                return new Date(params.value).toLocaleDateString()
-            },
-            width: 130
-        },
-        {
-            field: "expectedReturnDate",
-            headerName: "Return Date",
-            valueFormatter: (params) => {
-                if (!params.value) return ""
-                const date = new Date(params.value)
-                const now = new Date()
-                const diffTime = date.getTime() - now.getTime()
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return `${date.toLocaleDateString()} (${diffDays} days)`
-            },
-            cellClass: (params) => {
-                return "text-slate-300"
-            },
-            width: 180
-        },
-        {
-            field: "itemsCount",
-            headerName: "Items",
-            cellRenderer: (params: any) => {
-                return (
-                    <div className="flex items-center gap-2 h-full w-full">
-                        <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-xs">
-                            {params.value} Items
-                        </span>
-                    </div>
-                );
-            },
-            width: 120
-        },
-        {
-            field: "customerName",
-            headerName: "Customer",
-            width: 180
-        },
-        {
-            field: "priority",
-            headerName: "Priority",
-            width: 110,
-        },
-        {
-            field: "createdBy",
-            headerName: "Created By",
-            cellRenderer: OwnerCellRenderer,
-            width: 180
-        },
-        {
-            field: "totalValue",
-            headerName: "Value",
-            valueFormatter: (params) => {
-                return params.value ? `₹ ${params.value.toLocaleString()} /-` : ""
-            }
+    const colDefs = useMemo<ColDef[]>(() => {
+        // Draft DC Columns
+        if (activeView === 'Draft') {
+            return [
+                {
+                    field: "actions",
+                    headerName: "",
+                    cellRenderer: ActionsCellRenderer,
+                    pinned: "left",
+                    lockPinned: true,
+                    width: 50,
+                    cellClass: "flex items-center justify-center p-0",
+                    suppressHeaderMenuButton: true,
+                    suppressMovable: true,
+                    lockPosition: "left",
+                    resizable: false,
+                    sortable: false,
+                    filter: false
+                },
+                {
+                    field: "draftId",
+                    headerName: "Draft ID",
+                    pinned: "left",
+                    lockPinned: true,
+                    width: 140,
+                    cellClass: "font-medium text-slate-200"
+                },
+                {
+                    field: "partyDetails.partyName",
+                    headerName: "Party Name",
+                    valueGetter: (params) => params.data?.partyDetails?.partyName || 'N/A',
+                    width: 180
+                },
+                {
+                    field: "process",
+                    headerName: "Process",
+                    width: 150
+                },
+                {
+                    field: "dcDate",
+                    headerName: "Date",
+                    valueFormatter: (params) => {
+                        if (!params.value) return ""
+                        return new Date(params.value).toLocaleDateString()
+                    },
+                    width: 130
+                },
+                {
+                    field: "dcType",
+                    headerName: "Department",
+                    width: 120
+                },
+                {
+                    field: "draftDcItems",
+                    headerName: "Total Items",
+                    valueGetter: (params) => params.data?.draftDcItems?.length || 0,
+                    cellRenderer: (params: any) => {
+                        return (
+                            <div className="flex items-center gap-2 h-full w-full">
+                                <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-xs">
+                                    {params.value} Items
+                                </span>
+                            </div>
+                        );
+                    },
+                    width: 120
+                },
+                {
+                    field: "draftDcItems",
+                    headerName: "Total Quantity",
+                    valueGetter: (params) => {
+                        const items = params.data?.draftDcItems || []
+                        return items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)
+                    },
+                    width: 140
+                },
+                {
+                    field: "vehicleNo",
+                    headerName: "Vehicle No",
+                    width: 140
+                },
+                {
+                    field: "draftDcItems",
+                    headerName: "Incharge",
+                    valueGetter: (params) => {
+                        const items = params.data?.draftDcItems || []
+                        const incharges = items
+                            .map((item: any) => item.projectIncharge)
+                            .filter((name: string) => name && name.trim())
+                        // Remove duplicates and join with comma
+                        const uniqueIncharges = [...new Set(incharges)]
+                        return uniqueIncharges.join(', ') || 'N/A'
+                    },
+                    width: 180
+                }
+            ]
         }
-    ], [])
+
+        // Regular DC Columns
+        return [
+            {
+                field: "actions",
+                headerName: "",
+                cellRenderer: ActionsCellRenderer,
+                pinned: "left",
+                lockPinned: true,
+                width: 50,
+                cellClass: "flex items-center justify-center p-0 ",
+                suppressHeaderMenuButton: true,
+                suppressMovable: true,
+                lockPosition: "left",
+                resizable: false,
+                sortable: false,
+                filter: false
+            },
+            {
+                field: "dcNumber",
+                headerName: "DC Number",
+                pinned: "left", // Pinned Left
+                lockPinned: true,
+                width: 140,
+                cellClass: "font-medium text-slate-200"
+            },
+            {
+                field: "status",
+                headerName: "Status",
+                cellRenderer: StatusCellRenderer,
+                width: 130,
+                pinned: "left", // Pinned Left
+                lockPinned: true, // Prevent unpinning logic if desired, keeping it simple
+                cellClass: "flex items-center"
+            },
+            {
+                field: "dispatchDate",
+                headerName: "Dispatch Date",
+                valueFormatter: (params) => {
+                    if (!params.value) return ""
+                    return new Date(params.value).toLocaleDateString()
+                },
+                width: 130
+            },
+            {
+                field: "expectedReturnDate",
+                headerName: "Return Date",
+                valueFormatter: (params) => {
+                    if (!params.value) return ""
+                    const date = new Date(params.value)
+                    const now = new Date()
+                    const diffTime = date.getTime() - now.getTime()
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    return `${date.toLocaleDateString()} (${diffDays} days)`
+                },
+                cellClass: (params) => {
+                    return "text-slate-300"
+                },
+                width: 180
+            },
+            {
+                field: "itemsCount",
+                headerName: "Items",
+                cellRenderer: (params: any) => {
+                    return (
+                        <div className="flex items-center gap-2 h-full w-full">
+                            <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-xs">
+                                {params.value} Items
+                            </span>
+                        </div>
+                    );
+                },
+                width: 120
+            },
+            {
+                field: "customerName",
+                headerName: "Customer",
+                width: 180
+            },
+            {
+                field: "priority",
+                headerName: "Priority",
+                width: 110,
+            },
+            {
+                field: "createdBy",
+                headerName: "Created By",
+                cellRenderer: OwnerCellRenderer,
+                width: 180
+            },
+            {
+                field: "totalValue",
+                headerName: "Value",
+                valueFormatter: (params) => {
+                    return params.value ? `₹ ${params.value.toLocaleString()} /-` : ""
+                }
+            }
+        ]
+    }, [activeView])
 
     // Grid Options
     const defaultColDef = useMemo<ColDef>(() => ({
@@ -283,6 +404,14 @@ export default function DCGrid() {
         // columnApi is deprecated/removed in v31+, access via api
         // setColumnApi(params.columnApi)
     }, []);
+
+    const onRowClicked = useCallback((event: any) => {
+        // Only navigate for Draft DCs
+        if (activeView === 'Draft' && event.data?.draftId) {
+            router.push(`/dashboard/dc/draft/${event.data.draftId}`)
+        }
+    }, [activeView, router])
+
 
     const onSortChanged = useCallback((e: any) => {
         // Use the event api if available, otherwise fallback to state
@@ -327,7 +456,7 @@ export default function DCGrid() {
 
     return (
         // <div className="flex flex-col h-full bg-[#202124] text-slate-200">
-                <div className="flex flex-col h-full bg-[#0B1120] text-slate-200">
+        <div className="flex flex-col h-full bg-[#0B1120] text-slate-200">
 
             <GridHeader
                 activeView={activeView}
@@ -352,6 +481,7 @@ export default function DCGrid() {
                         // rowSelection="multiple" REMOVED
                         animateRows={true}
                         onGridReady={onGridReady}
+                        onRowClicked={onRowClicked}
                         onSortChanged={onSortChanged}
                         onFilterChanged={onFilterChanged}
                         onCellContextMenu={onCellContextMenu}
@@ -527,6 +657,7 @@ export default function DCGrid() {
                 open={deleteDialogOpen}
                 onOpenChange={setDeleteDialogOpen}
                 onConfirm={handleConfirmDelete}
+                itemName={deleteTarget?.draftId}
             />
         </div>
     )

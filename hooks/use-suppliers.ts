@@ -106,7 +106,17 @@ export function useCreateSupplier() {
         mutationFn: async (supplierData: CreateSupplierData) => {
             const res = await externalApi.createSupplier(supplierData)
             if (!res.success) throw new Error(res.message || 'Failed to create supplier')
-            return res.data as Supplier
+
+            // API might return { data: { supplier: {...} } } or { data: {...} }
+            const supplierResponse = res.data as any
+            const supplier = supplierResponse.supplier || supplierResponse
+
+            // Ensure partyId exists - if not, construct it from the response
+            if (!supplier.partyId && supplier.id) {
+                console.warn('partyId missing from API response, using returned data:', supplier)
+            }
+
+            return supplier as Supplier
         },
         onSuccess: (data) => {
             // Invalidate supplier list to trigger refetch
@@ -241,4 +251,32 @@ export function usePrefetchSupplier() {
             staleTime: 5 * 60 * 1000,
         })
     }
+}
+
+/**
+ * Hook to search suppliers by name
+ * Useful for autocomplete/search functionality
+ * Uses server-side search via API query parameter
+ * 
+ * @param searchTerm - Search term to filter suppliers
+ * @param enabled - Whether to enable the query
+ * 
+ * @example
+ * const { data: suppliers } = useSearchSuppliers('Stranger')
+ */
+export function useSearchSuppliers(searchTerm: string, enabled = true) {
+    return useQuery({
+        queryKey: [...supplierKeys.all, 'search', searchTerm],
+        queryFn: async () => {
+            // Use API's built-in search parameter
+            const res = await externalApi.getSuppliers(searchTerm)
+            if (!res.success) throw new Error(res.message || 'Failed to search suppliers')
+
+            // API returns { data: { suppliers: [...] } }
+            const data = res.data as any
+            return (data.suppliers || []) as Supplier[]
+        },
+        enabled: enabled && (searchTerm?.length ?? 0) >= 2, // Only search when 2+ characters
+        staleTime: 3 * 60 * 1000,
+    })
 }

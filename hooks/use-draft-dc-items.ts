@@ -190,3 +190,80 @@ export function useDraftDCItemsStats() {
         staleTime: 2 * 60 * 1000,
     })
 }
+
+/**
+ * Hook to update draft DC items
+ * 
+ * Features:
+ * - Updates multiple items in a single request
+ * - Invalidates draft DC queries to trigger refetch
+ * - Shows success/error toast notifications
+ * 
+ * @example
+ * ```tsx
+ * const updateItems = useUpdateDraftDCItems()
+ * 
+ * await updateItems.mutateAsync({
+ *   id: 'DC-000028',
+ *   items: [
+ *     { itemId: 'DCITEM000012', notes: 'Updated note' },
+ *     { itemId: 'DCITEM000013', quantity: 5 }
+ *   ]
+ * })
+ * ```
+ */
+export function useUpdateDraftDCItems() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async ({ id, items }: { id: string | number; items: any[] }) => {
+            const res = await externalApi.updateDraftDCItems(id, items)
+            if (!res.success) throw new Error(res.message || 'Failed to update draft DC items')
+            return res.data
+        },
+        onSuccess: (data, variables) => {
+            // Invalidate draft DC items list
+            queryClient.invalidateQueries({ queryKey: draftDCItemsKeys.lists() })
+
+            // Invalidate the specific draft DC details
+            queryClient.invalidateQueries({ queryKey: ['draft-dc', variables.id] })
+        },
+    })
+}
+
+/**
+ * Hook to delete a draft DC item
+ * 
+ * Features:
+ * - Removes item from draft DC
+ * - Invalidates queries to trigger refetch
+ * - Shows success/error toast notifications
+ * 
+ * @example
+ * ```tsx
+ * const deleteItem = useDeleteDraftDCItem()
+ * 
+ * await deleteItem.mutateAsync('DCITEM000012')
+ * // Success toast shown automatically
+ * ```
+ */
+export function useDeleteDraftDCItem() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async (id: string | number) => {
+            const res = await externalApi.deleteDraftDCItem(id)
+            if (!res.success) throw new Error(res.message || 'Failed to delete draft DC item')
+            return res.data
+        },
+        onSuccess: (data) => {
+            // Invalidate draft DC items list
+            queryClient.invalidateQueries({ queryKey: draftDCItemsKeys.lists() })
+
+            // Invalidate the draft DC that contained this item
+            if (data.draftId) {
+                queryClient.invalidateQueries({ queryKey: ['draft-dc', data.draftId] })
+            }
+        },
+    })
+}

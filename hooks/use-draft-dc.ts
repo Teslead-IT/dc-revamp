@@ -67,6 +67,46 @@ export function useDraftDCs(options?: Partial<UseQueryOptions<DraftDC[]>>) {
 }
 
 /**
+ * Hook to fetch draft DC details with pagination
+ * 
+ * @param page - Page number (1-indexed)
+ * @param limit - Items per page (default: 25)
+ * @param enabled - Whether to enable the query
+ * 
+ * @example
+ * ```tsx
+ * const { data, isLoading } = useDraftDCDetails(1, 25)
+ * 
+ * return (
+ *   <div>
+ *     <p>Total: {data?.meta.total}</p>
+ *     {data?.data.map(dc => (
+ *       <DCRow
+ *         key={dc.id}
+ *         draftId={dc.draftId}
+ *         partyName={dc.partyDetails?.partyName}
+ *         totalItems={dc.draftDcItems.length}
+ *       />
+ *     ))}
+ *   </div>
+ * )
+ * ```
+ */
+export function useDraftDCDetails(page: number = 1, limit: number = 25, enabled = true) {
+    return useQuery({
+        queryKey: [...draftDCKeys.all, 'details', page, limit],
+        queryFn: async () => {
+            const res = await externalApi.getDraftDCDetails(page, limit)
+            if (!res.success) throw new Error(res.message || 'Failed to fetch draft DC details')
+            return res as any // Returns DraftDCDetailsResponse
+        },
+        enabled,
+        // Keep draft DC details fresh for 2 minutes
+        staleTime: 2 * 60 * 1000,
+    })
+}
+
+/**
  * Hook to fetch a single draft DC by ID
  * 
  * @param id - Draft DC ID (can be null/undefined to disable query)
@@ -269,11 +309,7 @@ export function useDeleteDraftDC() {
 
             // Invalidate list to trigger refetch
             queryClient.invalidateQueries({ queryKey: draftDCKeys.lists() })
-
-            toast.success("Draft DC deleted successfully")
-        },
-        onError: (error: any) => {
-            toast.error(error.message || "Failed to delete draft DC")
+            queryClient.invalidateQueries({ queryKey: draftDCKeys.all })
         },
     })
 }

@@ -32,9 +32,19 @@ interface AddItemsModalProps {
     onConfirm: (items: ItemRow[]) => void
     enableWeight: boolean
     enableSqft: boolean
+    initialItems?: ItemRow[] // Optional initial items for editing
+    mode?: 'add' | 'update' // Mode: add new items or update existing items
 }
 
-export function AddItemsModal({ open, onOpenChange, onConfirm, enableWeight, enableSqft }: AddItemsModalProps) {
+export function AddItemsModal({
+    open,
+    onOpenChange,
+    onConfirm,
+    enableWeight,
+    enableSqft,
+    initialItems = [],
+    mode = 'add'
+}: AddItemsModalProps) {
     const { toast } = useToast()
     const [items, setItems] = useState<ItemRow[]>([{
         id: 1,
@@ -57,26 +67,33 @@ export function AddItemsModal({ open, onOpenChange, onConfirm, enableWeight, ena
     // Reset items when modal opens
     useEffect(() => {
         if (open) {
-            const newItem = {
-                id: 1,
-                itemName: "",
-                description: "",
-                projectName: "",
-                projectIncharge: "",
-                quantity: "",
-                uom: "",
-                weightPerUnit: "",
-                totalWeight: "",
-                sqftPerUnit: "",
-                totalSqft: "",
-                rate: "",
-                remarks: "",
-                notes: "",
+            if (mode === 'update' && initialItems.length > 0) {
+                // Use the provided initial items
+                setItems(initialItems)
+                setExpandedItemId(initialItems[0].id)
+            } else {
+                // Create a new empty item
+                const newItem = {
+                    id: Date.now(), // Use timestamp for unique ID
+                    itemName: "",
+                    description: "",
+                    projectName: "",
+                    projectIncharge: "",
+                    quantity: "",
+                    uom: "",
+                    weightPerUnit: "",
+                    totalWeight: "",
+                    sqftPerUnit: "",
+                    totalSqft: "",
+                    rate: "",
+                    remarks: "",
+                    notes: "",
+                }
+                setItems([newItem])
+                setExpandedItemId(newItem.id)
             }
-            setItems([newItem])
-            setExpandedItemId(1)
         }
-    }, [open])
+    }, [open]) // Only depend on 'open' to prevent infinite loops
 
     const addRow = () => {
         const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1
@@ -198,7 +215,9 @@ export function AddItemsModal({ open, onOpenChange, onConfirm, enableWeight, ena
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="bg-[#0F172A] border-slate-700 text-slate-100 w-[80vw] max-w-[80vw] h-[90vh] flex flex-col p-0 shadow-2xl shadow-black/50 gap-0 sm:max-w-[80vw] [&>button]:text-white [&>button]:bg-slate-800/50 [&>button]:hover:bg-slate-700 [&>button]:z-50 [&>button]:h-8 [&>button]:w-8 [&>button]:rounded-full [&>button]:top-4 [&>button]:right-4">
                 <DialogHeader className="p-6 pb-4 border-b border-slate-800 shrink-0">
-                    <DialogTitle className="text-2xl text-white font-bold ml-1">Add Items</DialogTitle>
+                    <DialogTitle className="text-2xl text-white font-bold ml-1">
+                        {mode === 'update' ? 'Update Items' : 'Add Items'}
+                    </DialogTitle>
                     <div className="mt-2 bg-blue-900/20 border border-blue-900/50 text-blue-200 px-4 py-2 rounded-lg text-sm flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
                         Please complete all fields for the current item before adding a new one.
@@ -453,7 +472,7 @@ export function AddItemsModal({ open, onOpenChange, onConfirm, enableWeight, ena
                             onClick={handleConfirm}
                             className="bg-brand hover:bg-brand/90 text-white"
                         >
-                            Add Items
+                            {mode === 'update' ? 'Save Changes' : 'Add Items'}
                         </Button>
                     </div>
                 </DialogFooter>

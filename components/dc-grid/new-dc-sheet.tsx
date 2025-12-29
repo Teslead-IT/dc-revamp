@@ -14,31 +14,22 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet"
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Trash2, User, FileText, Package, Loader2, X } from "lucide-react"
+import { Plus, Trash2, User, FileText, Package, Loader2, Edit } from "lucide-react"
 import { showToast as toast } from "@/lib/toast-service"
-import {
-    CitySelect,
-    StateSelect,
-} from "react-country-state-city";
-import "react-country-state-city/dist/react-country-state-city.css";
+import { useCreateSupplier } from "@/hooks/use-suppliers"
 
 // Import React Query hooks
-import { useSearchSuppliers, useCreateSupplier } from "@/hooks/use-suppliers"
+import { useSearchSuppliers } from "@/hooks/use-suppliers"
 import { useCreateDraftDC } from "@/hooks/use-draft-dc"
 import { useCreateDraftDCItems } from "@/hooks/use-draft-dc-items"
 import { useQueryClient } from "@tanstack/react-query"
 import { AddItemsModal } from "./add-items-modal"
+import { CreateSupplierModal } from "./create-supplier-modal"
 
-import type { Supplier, CreateSupplierData, DCType } from "@/lib/api-client"
+import type { Supplier, DCType } from "@/lib/api-client"
 
 interface ItemRow {
     id: number
@@ -55,11 +46,6 @@ interface ItemRow {
     rate: string
     remarks: string
     notes: string
-}
-
-
-const GST_STATE_CODES: Record<string, number> = {
-    "Jammu and Kashmir": 1, "Himachal Pradesh": 2, "Punjab": 3, "Chandigarh": 4, "Uttarakhand": 5, "Haryana": 6, "Delhi": 7, "Rajasthan": 8, "Uttar Pradesh": 9, "Bihar": 10, "Sikkim": 11, "Arunachal Pradesh": 12, "Nagaland": 13, "Manipur": 14, "Mizoram": 15, "Tripura": 16, "Meghalaya": 17, "Assam": 18, "West Bengal": 19, "Jharkhand": 20, "Odisha": 21, "Chhattisgarh": 22, "Madhya Pradesh": 23, "Gujarat": 24, "Dadra and Nagar Haveli and Daman and Diu": 26, "Maharashtra": 27, "Karnataka": 29, "Goa": 30, "Lakshadweep": 31, "Kerala": 32, "Tamil Nadu": 33, "Puducherry": 34, "Andaman and Nicobar Islands": 35, "Telangana": 36, "Andhra Pradesh": 37, "Ladakh": 38
 }
 
 export function NewDCSheet() {
@@ -102,13 +88,30 @@ export function NewDCSheet() {
         })
     }, [supplierSearch, searchResults, isSearching, searchError, showSupplierDropdown])
 
+    // Reset form when sheet closes
+    useEffect(() => {
+        if (!open) {
+            setSupplierSearch('')
+            setSelectedSupplier(null)
+            setShowSupplierDropdown(false)
+            setVehicleNo('')
+            setProcess('')
+            setDCType('SPM')
+            setDCDate('')
+            setNotes('')
+            setEnableWeight(true)
+            setEnableSqft(true)
+            setItems([])
+        }
+    }, [open])
+
     const removeItem = (id: number) => {
         setItems(items.filter((item) => item.id !== id))
     }
 
-    const handleItemsConfirm = (newItems: ItemRow[]) => {
-        // Append new items from modal to existing items
-        setItems([...items, ...newItems])
+    const handleItemsConfirm = (updatedItems: ItemRow[]) => {
+        // If items already exist, we're updating; otherwise adding
+        setItems(updatedItems)
     }
 
     // Supplier handlers
@@ -121,7 +124,12 @@ export function NewDCSheet() {
     const handleSupplierSearchChange = (value: string) => {
         setSupplierSearch(value)
         setSelectedSupplier(null)
-        setShowSupplierDropdown(value.length >= 2)
+        // Only open dropdown when starting to type, don't close it during typing
+        if (value.length >= 2 && !showSupplierDropdown) {
+            setShowSupplierDropdown(true)
+        } else if (value.length < 2) {
+            setShowSupplierDropdown(false)
+        }
     }
 
     const handleCreateNewSupplier = () => {
@@ -286,34 +294,29 @@ export function NewDCSheet() {
                                 </div>
 
                                 {selectedSupplier ? (
-                                    <div className="bg-[#1e293b]/50 p-6 rounded-xl border border-slate-800/60 relative group">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8">
+                                    <div className="bg-[#1e293b]/50 p-4 rounded-lg border border-slate-800/60">
+                                        <div className="grid grid-cols-3 gap-x-6 gap-y-3">
                                             <div>
-                                                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 block">Party Name</Label>
-                                                <div className="text-white font-medium text-lg">{selectedSupplier.partyName}</div>
+                                                <Label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Party Name</Label>
+                                                <div className="text-white font-medium text-sm mt-0.5">{selectedSupplier.partyName}</div>
                                             </div>
 
                                             <div>
-                                                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 block">GSTIN</Label>
-                                                <div className="text-slate-200 font-mono tracking-wide">{selectedSupplier.gstinNumber || '-'}</div>
+                                                <Label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">GSTIN</Label>
+                                                <div className="text-slate-200 font-mono text-xs mt-0.5">{selectedSupplier.gstinNumber || '-'}</div>
                                             </div>
 
                                             <div>
-                                                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 block">Contact</Label>
-                                                <div className="text-slate-300 text-sm space-y-0.5">
-                                                    {selectedSupplier.email && <div className="flex items-center gap-2">{selectedSupplier.email}</div>}
-                                                    {selectedSupplier.phone && <div className="flex items-center gap-2">{selectedSupplier.phone}</div>}
-                                                    {!selectedSupplier.email && !selectedSupplier.phone && <span className="text-slate-500">-</span>}
+                                                <Label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Contact</Label>
+                                                <div className="text-slate-300 text-xs mt-0.5">
+                                                    {selectedSupplier.email || selectedSupplier.phone || '-'}
                                                 </div>
                                             </div>
 
-                                            <div className="col-span-1 md:col-span-2 lg:col-span-3 pt-4 border-t border-slate-700/50 mt-2">
-                                                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 block">Address</Label>
-                                                <div className="text-slate-300 text-sm leading-relaxed max-w-2xl">
-                                                    {selectedSupplier.addressLine1}
-                                                    {selectedSupplier.addressLine2 && <>, {selectedSupplier.addressLine2}</>}
-                                                    <br />
-                                                    {selectedSupplier.city}, {selectedSupplier.state} - {selectedSupplier.pinCode}
+                                            <div className="col-span-3">
+                                                <Label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Address</Label>
+                                                <div className="text-slate-300 text-xs leading-snug mt-0.5">
+                                                    {selectedSupplier.addressLine1}{selectedSupplier.addressLine2 && `, ${selectedSupplier.addressLine2}`}, {selectedSupplier.city}, {selectedSupplier.state} - {selectedSupplier.pinCode}
                                                 </div>
                                             </div>
                                         </div>
@@ -329,33 +332,51 @@ export function NewDCSheet() {
                                                 className="bg-slate-900/50 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-brand"
                                             />
 
-                                            {/* Autocomplete Dropdown */}
+                                            {/* Autocomplete Dropdown with smooth transitions */}
                                             {showSupplierDropdown && (
-                                                <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                                <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl max-h-60 overflow-y-auto animate-in fade-in-0 slide-in-from-top-2 duration-200">
                                                     {searchError ? (
-                                                        <div className="p-3 text-sm text-red-400">
-                                                            Error: {(searchError as Error).message}
+                                                        <div className="p-4 text-sm text-red-400 bg-red-950/20 rounded-lg m-2">
+                                                            <span className="font-medium">Error:</span> {(searchError as Error).message}
                                                         </div>
                                                     ) : isSearching ? (
-                                                        <div className="p-3 text-sm text-slate-400">Searching...</div>
+                                                        <div className="p-3 space-y-2">
+                                                            {[1, 2, 3].map((i) => (
+                                                                <div key={i} className="animate-pulse">
+                                                                    <div className="h-4 bg-slate-800 rounded w-3/4 mb-2"></div>
+                                                                    <div className="h-3 bg-slate-800 rounded w-1/2"></div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     ) : searchResults.length > 0 ? (
-                                                        searchResults.map((supplier) => (
-                                                            <button
-                                                                key={supplier.id}
-                                                                onClick={() => handleSupplierSelect(supplier)}
-                                                                className="w-full text-left px-4 py-2 hover:bg-slate-800 border-b border-slate-800 last:border-b-0"
-                                                            >
-                                                                <p className="font-medium text-slate-200">{supplier.partyName}</p>
-                                                                <p className="text-xs text-slate-400">{supplier.city}, {supplier.state}</p>
-                                                            </button>
-                                                        ))
+                                                        <div className="py-1">
+                                                            {searchResults.map((supplier, index) => (
+                                                                <button
+                                                                    key={supplier.id}
+                                                                    onClick={() => handleSupplierSelect(supplier)}
+                                                                    className="w-full text-left px-4 py-3 hover:bg-slate-800/80 transition-colors duration-150 border-b border-slate-800/50 last:border-b-0 group"
+                                                                    style={{ animationDelay: `${index * 50}ms` }}
+                                                                >
+                                                                    <p className="font-medium text-slate-200 group-hover:text-white transition-colors text-sm">{supplier.partyName}</p>
+                                                                    <p className="text-xs text-slate-500 group-hover:text-slate-400 transition-colors mt-0.5">
+                                                                        {supplier.city}, {supplier.state}
+                                                                    </p>
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     ) : (
-                                                        <div className="p-4 text-center">
-                                                            <p className="text-sm text-slate-400 mb-2">No supplier found</p>
-                                                            <Button size="sm" onClick={handleCreateNewSupplier} className="bg-brand hover:bg-brand/90">
-                                                                <Plus className="w-3 h-3 mr-1" />
-                                                                Create New
-                                                            </Button>
+                                                        <div className="p-2">
+                                                            <div className="bg-slate-800/30 rounded-md p-2 text-center border border-slate-700/30">
+                                                                <p className="text-xs text-slate-400 mb-2">No supplier found</p>
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={handleCreateNewSupplier}
+                                                                    className="bg-brand hover:bg-brand/90 text-white h-7 text-xs w-full"
+                                                                >
+                                                                    <Plus className="w-3 h-3 mr-1" />
+                                                                    Create New
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
@@ -453,8 +474,17 @@ export function NewDCSheet() {
                                         onClick={() => setShowAddItemsModal(true)}
                                         className="w-full bg-brand hover:bg-brand/90 text-white h-12 text-base gap-2"
                                     >
-                                        <Plus className="h-5 w-5" />
-                                        {items.length === 0 ? 'Add Items' : 'Add More Items'}
+                                        {items.length === 0 ? (
+                                            <>
+                                                <Plus className="h-5 w-5" />
+                                                Add Items
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Edit className="h-5 w-5" />
+                                                Update Items
+                                            </>
+                                        )}
                                     </Button>
                                 </div>
 
@@ -565,270 +595,16 @@ export function NewDCSheet() {
                 }}
             />
 
-            {/* Add Items Modal */}
+            {/* Add/Update Items Modal */}
             <AddItemsModal
                 open={showAddItemsModal}
                 onOpenChange={setShowAddItemsModal}
                 onConfirm={handleItemsConfirm}
                 enableWeight={enableWeight}
                 enableSqft={enableSqft}
+                mode={items.length > 0 ? "update" : "add"}
+                initialItems={items}
             />
         </>
-    )
-}
-
-// Create Supplier Modal Component
-interface CreateSupplierModalProps {
-    open: boolean
-    onOpenChange: (open: boolean) => void
-    supplierName: string
-    onSupplierCreated: (supplier: Supplier) => void
-}
-
-function CreateSupplierModal({ open, onOpenChange, supplierName, onSupplierCreated }: CreateSupplierModalProps) {
-    const createSupplier = useCreateSupplier()
-
-    const [formData, setFormData] = useState<Partial<CreateSupplierData>>({
-        partyName: '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        stateCode: 33,
-        pinCode: undefined,
-        gstinNumber: '',
-        email: '',
-        phone: ''
-    })
-    const [stateId, setStateId] = useState(0);
-
-    // Reset form when modal opens/closes
-    useEffect(() => {
-        if (open) {
-            // Reset to fresh state when opening
-            setFormData({
-                partyName: supplierName,
-                addressLine1: '',
-                addressLine2: '',
-                city: '',
-                state: '',
-                stateCode: 33,
-                pinCode: undefined,
-                gstinNumber: '',
-                email: '',
-                phone: ''
-            })
-            setStateId(0) // Reset state selector
-        }
-    }, [open, supplierName])
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
-        try {
-            const newSupplier = await createSupplier.mutateAsync(formData as CreateSupplierData)
-            onSupplierCreated(newSupplier as Supplier)
-            toast.success('Supplier created successfully!')
-            // Close modal and reset
-            onOpenChange(false)
-        } catch (error) {
-            // Error handled by hook
-        }
-    }
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#0F172A] border-slate-700 text-slate-100">
-                <DialogHeader>
-                    <DialogTitle className="text-slate-100">Create New Supplier</DialogTitle>
-                </DialogHeader>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <Label className="text-slate-300">Party Name *</Label>
-                        <Input
-                            value={formData.partyName || ''}
-                            onChange={(e) => setFormData({ ...formData, partyName: e.target.value })}
-                            required
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div>
-                        <Label className="text-slate-300">Address Line 1 *</Label>
-                        <Input
-                            value={formData.addressLine1 || ''}
-                            onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
-                            required
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div>
-                        <Label className="text-slate-300">Address Line 2</Label>
-                        <Input
-                            value={formData.addressLine2 || ''}
-                            onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 z-50">
-                        <style>{`
-                            .stdropdown-container {
-                                border: 1px solid #334155 !important;
-                                background-color: rgba(15, 23, 42, 0.5) !important;
-                                border-radius: 0.375rem !important;
-                            }
-                            /* Remove default inner borders/outlines */
-                            .stdropdown-container *:not(.stdropdown-menu):not(.stdropdown-item) {
-                                border: none !important;
-                                outline: none !important;
-                                box-shadow: none !important;
-                            }
-                            .stdropdown-input {
-                                background-color: transparent !important;
-                                color: #f1f5f9 !important;
-                            }
-                            .stdropdown-input::placeholder {
-                                color: #94a3b8 !important;
-                            }
-                            .stdropdown-menu {
-                                background-color: #0f172a !important;
-                                border: 1px solid #334155 !important;
-                                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
-                                z-index: 9999 !important;
-                            }
-                            .stdropdown-item {
-                                background-color: #0f172a !important;
-                                color: #cbd5e1 !important;
-                            }
-                            .stdropdown-item:hover {
-                                background-color: #1e293b !important;
-                                color: #f8fafc !important;
-                            }
-                            .stdropdown-tool {
-                                display: none !important;
-                            }
-                        `}</style>
-                        <div className="flex flex-col space-y-2">
-                            <Label className="text-slate-300">State *</Label>
-                            <div>
-                                <StateSelect
-                                    key={`state-${open}`}
-                                    countryid={101}
-                                    onChange={(e: any) => {
-                                        setStateId(e.id);
-                                        const stateName = e.name;
-                                        setFormData({
-                                            ...formData,
-                                            state: stateName,
-                                            stateCode: GST_STATE_CODES[stateName] || 33 // Default or 0
-                                        });
-                                    }}
-                                    placeHolder="Select State"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col space-y-2">
-                            <Label className="text-slate-300">City *</Label>
-                            <div>
-                                <CitySelect
-                                    key={`city-${open}-${stateId}`}
-                                    countryid={101}
-                                    stateid={stateId}
-                                    onChange={(e: any) => {
-                                        setFormData({ ...formData, city: e.name });
-                                    }}
-                                    placeHolder="Select City"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label className="text-slate-300">State Code (Auto-filled)</Label>
-                            <Input
-                                type="number"
-                                value={formData.stateCode || 33}
-                                readOnly
-                                className="bg-slate-800 border-slate-700 text-slate-400"
-                            />
-                            <p className="text-xs text-slate-500 mt-1">Automatically set</p>
-                        </div>
-
-                        <div>
-                            <Label className="text-slate-300">Pin Code *</Label>
-                            <Input
-                                type="number"
-                                value={formData.pinCode || ''}
-                                onChange={(e) => setFormData({ ...formData, pinCode: parseInt(e.target.value) })}
-                                required
-                                className="bg-slate-900/50 border-slate-700 text-slate-100"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <Label className="text-slate-300">GSTIN Number *</Label>
-                        <Input
-                            value={formData.gstinNumber || ''}
-                            onChange={(e) => setFormData({ ...formData, gstinNumber: e.target.value })}
-                            placeholder="22AAAAA0000A1Z5"
-                            required
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div>
-                        <Label className="text-slate-300">Email *</Label>
-                        <Input
-                            type="email"
-                            value={formData.email || ''}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            placeholder="supplier@example.com"
-                            required
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div>
-                        <Label className="text-slate-300">Phone *</Label>
-                        <Input
-                            type="tel"
-                            value={formData.phone || ''}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            placeholder="9876543210"
-                            required
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div className="flex justify-end space-x-3 pt-4">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => onOpenChange(false)}
-                            className="bg-slate-700 text-slate-200 hover:bg-slate-600"
-                        >
-                            Cancel
-                        </Button>
-
-                        <Button type="submit" disabled={createSupplier.isPending} className="bg-blue-600 hover:bg-blue-700 text-white">
-                            {createSupplier.isPending ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Creating...
-                                </>
-                            ) : (
-                                'Create Supplier'
-                            )}
-                        </Button>
-                    </div>
-                </form>
-            </DialogContent>
-        </Dialog>
     )
 }

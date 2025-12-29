@@ -6,43 +6,58 @@ type ToastOptions = { description?: string;[key: string]: any } | string
 
 const toastFn = (message: string, options?: ToastOptions) => {
   const description = typeof options === 'string' ? options : options?.description
+  const extraOptions = typeof options === 'object' ? options : {}
   return shadcnToast({
     title: message,
     description: description,
+    duration: 4000, // Auto-dismiss after 4 seconds
+    ...extraOptions, // Allow overriding if needed
   })
 }
 
 toastFn.success = (message: string, options?: ToastOptions) => {
   const description = typeof options === 'string' ? options : options?.description
+  const extraOptions = typeof options === 'object' ? options : {}
   return shadcnToast({
     variant: "success",
     title: message,
     description: description,
+    duration: 4000, // Auto-dismiss after 4 seconds
+    ...extraOptions, // Allow overriding if needed
   })
 }
 
 toastFn.error = (message: string, options?: ToastOptions) => {
   const description = typeof options === 'string' ? options : options?.description
+  const extraOptions = typeof options === 'object' ? options : {}
   return shadcnToast({
     variant: "destructive",
     title: message,
     description: description,
+    duration: 6000, // Auto-dismiss after 6 seconds (longer for errors)
+    ...extraOptions, // Allow overriding if needed
   })
 }
 
 toastFn.info = (message: string, options?: ToastOptions) => {
   const description = typeof options === 'string' ? options : options?.description
+  const extraOptions = typeof options === 'object' ? options : {}
   return shadcnToast({
     title: message,
     description: description,
+    duration: 4000, // Auto-dismiss after 4 seconds
+    ...extraOptions, // Allow overriding if needed
   })
 }
 
 toastFn.loading = (message: string, options?: ToastOptions) => {
   const description = typeof options === 'string' ? options : options?.description
+  const extraOptions = typeof options === 'object' ? options : {}
   return shadcnToast({
     title: "Loading...",
     description: message || description,
+    duration: Infinity, // Loading toasts stay until manually dismissed
+    ...extraOptions, // Allow overriding if needed
   })
 }
 

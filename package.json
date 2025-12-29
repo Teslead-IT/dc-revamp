@@ -89,6 +89,8 @@
     "@types/react-dom": "^19",
     "@types/sequelize": "^4.28.20",
     "postcss": "^8.5",
+    "postcss-flexbugs-fixes": "^5.0.2",
+    "postcss-preset-env": "^10.6.0",
     "tailwindcss": "^4.1.9",
     "tsx": "^4.21.0",
     "tw-animate-css": "1.3.3",

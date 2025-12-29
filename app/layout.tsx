@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono, Roboto } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { Toaster } from "sonner"
+import { Toaster } from "@/components/ui/toaster"
 import { QueryProvider } from "@/lib/query-provider"
 import "./globals.css"
 
@@ -46,7 +46,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`font-sans ${roboto.variable}`}>
         <QueryProvider>{children}</QueryProvider>
-        <Toaster richColors position="top-right" />
+        <Toaster />
         <Analytics />
       </body>
     </html>

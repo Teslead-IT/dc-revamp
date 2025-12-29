@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Trash2, User, FileText, Package, Loader2, X } from "lucide-react"
-import { toast } from "sonner"
+import { showToast as toast } from "@/lib/toast-service"
 import {
     CitySelect,
     StateSelect,
@@ -36,6 +36,7 @@ import { useSearchSuppliers, useCreateSupplier } from "@/hooks/use-suppliers"
 import { useCreateDraftDC } from "@/hooks/use-draft-dc"
 import { useCreateDraftDCItems } from "@/hooks/use-draft-dc-items"
 import { useQueryClient } from "@tanstack/react-query"
+import { AddItemsModal } from "./add-items-modal"
 
 import type { Supplier, CreateSupplierData, DCType } from "@/lib/api-client"
 
@@ -81,24 +82,8 @@ export function NewDCSheet() {
     // Items state
     const [enableWeight, setEnableWeight] = useState(true)
     const [enableSqft, setEnableSqft] = useState(true)
-    const [items, setItems] = useState<ItemRow[]>([
-        {
-            id: 1,
-            itemName: "",
-            description: "",
-            projectName: "",
-            projectIncharge: "",
-            quantity: "",
-            uom: "",
-            weightPerUnit: "",
-            totalWeight: "",
-            sqftPerUnit: "",
-            totalSqft: "",
-            rate: "",
-            remarks: "",
-            notes: "",
-        },
-    ])
+    const [showAddItemsModal, setShowAddItemsModal] = useState(false)
+    const [items, setItems] = useState<ItemRow[]>([])
 
     // React Query hooks
     const { data: searchResults = [], isLoading: isSearching, error: searchError } = useSearchSuppliers(supplierSearch)
@@ -117,57 +102,13 @@ export function NewDCSheet() {
         })
     }, [supplierSearch, searchResults, isSearching, searchError, showSupplierDropdown])
 
-    const addItem = () => {
-        setItems([
-            ...items,
-            {
-                id: items.length + 1,
-                itemName: "",
-                description: "",
-                projectName: "",
-                projectIncharge: "",
-                quantity: "",
-                uom: "",
-                weightPerUnit: "",
-                totalWeight: "",
-                sqftPerUnit: "",
-                totalSqft: "",
-                rate: "",
-                remarks: "",
-                notes: "",
-            },
-        ])
-    }
-
     const removeItem = (id: number) => {
-        if (items.length > 1) {
-            setItems(items.filter((item) => item.id !== id))
-        }
+        setItems(items.filter((item) => item.id !== id))
     }
 
-    const updateItem = (id: number, field: keyof ItemRow, value: string) => {
-        setItems(items.map((item) => {
-            if (item.id === id) {
-                const updated = { ...item, [field]: value }
-
-                // Auto-calculate total weight
-                if (field === 'quantity' || field === 'weightPerUnit') {
-                    const qty = parseFloat(field === 'quantity' ? value : item.quantity) || 0
-                    const wpu = parseFloat(field === 'weightPerUnit' ? value : item.weightPerUnit) || 0
-                    updated.totalWeight = (qty * wpu).toFixed(2)
-                }
-
-                // Auto-calculate total sqft
-                if (field === 'quantity' || field === 'sqftPerUnit') {
-                    const qty = parseFloat(field === 'quantity' ? value : item.quantity) || 0
-                    const spu = parseFloat(field === 'sqftPerUnit' ? value : item.sqftPerUnit) || 0
-                    updated.totalSqft = (qty * spu).toFixed(2)
-                }
-
-                return updated
-            }
-            return item
-        }))
+    const handleItemsConfirm = (newItems: ItemRow[]) => {
+        // Append new items from modal to existing items
+        setItems([...items, ...newItems])
     }
 
     // Supplier handlers
@@ -475,12 +416,12 @@ export function NewDCSheet() {
                                 </div>
                             </section>
 
-                            {/* Line Items Section - ORIGINAL TABLE DESIGN */}
+                            {/* Line Items Section - MODAL APPROACH */}
                             <section className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
                                         <Package className="h-5 w-5" />
-                                        Line Items
+                                        Line Items ({items.length})
                                     </h3>
                                     <div className="flex items-center gap-4 bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800">
                                         <div className="flex items-center gap-2">
@@ -505,178 +446,71 @@ export function NewDCSheet() {
                                     </div>
                                 </div>
 
-                                <div className="rounded-xl border border-slate-800 overflow-hidden bg-[#1e293b]/20">
-                                    <div className="overflow-x-auto custom-scrollbar">
-                                        <table className="w-full min-w-[800px] text-sm text-left">
-                                            <thead className="bg-slate-900/80 text-slate-400 font-medium uppercase text-xs tracking-wider">
-                                                <tr>
-                                                    <th className="px-4 py-3 w-12 text-center">#</th>
-                                                    <th className="px-3 py-3 w-40">Item Name</th>
-                                                    <th className="px-3 py-3 w-40">Description</th>
-                                                    <th className="px-3 py-3 w-32">Project</th>
-                                                    <th className="px-3 py-3 w-32">Proj Incharge</th>
-                                                    <th className="px-3 py-3 w-24">Qty</th>
-                                                    <th className="px-3 py-3 w-24">UOM</th>
-                                                    {enableWeight && (
-                                                        <>
-                                                            <th className="px-3 py-3 w-28">Wt/Unit</th>
-                                                            <th className="px-3 py-3 w-28">Total Wt</th>
-                                                        </>
-                                                    )}
-                                                    {enableSqft && (
-                                                        <>
-                                                            <th className="px-3 py-3 w-28">SqFt/Unit</th>
-                                                            <th className="px-3 py-3 w-28">Total  SqFt</th>
-                                                        </>
-                                                    )}
-                                                    <th className="px-3 py-3 w-28">Rate/Each</th>
-                                                    <th className="px-3 py-3 w-32">Remarks</th>
-                                                    <th className="px-3 py-3 w-32">Notes</th>
-                                                    <th className="px-3 py-3 w-16 text-center">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-800">
-                                                {items.map((item, index) => (
-                                                    <tr key={item.id} className="hover:bg-slate-800/30 transition-colors group">
-                                                        <td className="px-4 py-3 text-center text-slate-500">{index + 1}</td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.itemName}
-                                                                onChange={(e) => updateItem(item.id, "itemName", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="Item Name"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.description}
-                                                                onChange={(e) => updateItem(item.id, "description", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="Desc"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.projectName}
-                                                                onChange={(e) => updateItem(item.id, "projectName", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="Project"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.projectIncharge}
-                                                                onChange={(e) => updateItem(item.id, "projectIncharge", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="Incharge"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.quantity}
-                                                                onChange={(e) => updateItem(item.id, "quantity", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200 font-medium"
-                                                                placeholder="0"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.uom}
-                                                                onChange={(e) => updateItem(item.id, "uom", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="Nos"
-                                                            />
-                                                        </td>
-                                                        {enableWeight && (
-                                                            <>
-                                                                <td className="px-2 py-2">
-                                                                    <Input
-                                                                        value={item.weightPerUnit}
-                                                                        onChange={(e) => updateItem(item.id, "weightPerUnit", e.target.value)}
-                                                                        className="h-9 bg-teal-500/10 border-transparent hover:border-teal-500/50 focus:border-teal-500 text-teal-300 placeholder:text-teal-700/50"
-                                                                        placeholder="0.00"
-                                                                    />
-                                                                </td>
-                                                                <td className="px-2 py-2">
-                                                                    <Input
-                                                                        value={item.totalWeight}
-                                                                        readOnly
-                                                                        className="h-9 bg-teal-500/10 border-transparent text-teal-300 placeholder:text-teal-700/50 font-medium"
-                                                                        placeholder="0.00"
-                                                                    />
-                                                                </td>
-                                                            </>
-                                                        )}
-                                                        {enableSqft && (
-                                                            <>
-                                                                <td className="px-2 py-2">
-                                                                    <Input
-                                                                        value={item.sqftPerUnit}
-                                                                        onChange={(e) => updateItem(item.id, "sqftPerUnit", e.target.value)}
-                                                                        className="h-9 bg-blue-500/10 border-transparent hover:border-blue-500/50 focus:border-blue-500 text-blue-300 placeholder:text-blue-700/50"
-                                                                        placeholder="0.00"
-                                                                    />
-                                                                </td>
-                                                                <td className="px-2 py-2">
-                                                                    <Input
-                                                                        value={item.totalSqft}
-                                                                        readOnly
-                                                                        className="h-9 bg-blue-500/10 border-transparent text-blue-300 placeholder:text-blue-700/50 font-medium"
-                                                                        placeholder="0.00"
-                                                                    />
-                                                                </td>
-                                                            </>
-                                                        )}
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.rate}
-                                                                onChange={(e) => updateItem(item.id, "rate", e.target.value)}
-                                                                className="h-9 bg-amber-500/10 border-transparent hover:border-amber-500/50 focus:border-amber-500 text-amber-300 placeholder:text-amber-700/50"
-                                                                placeholder="0.00"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.remarks}
-                                                                onChange={(e) => updateItem(item.id, "remarks", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="..."
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.notes}
-                                                                onChange={(e) => updateItem(item.id, "notes", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="..."
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2 text-center">
-                                                            <button
-                                                                onClick={() => removeItem(item.id)}
-                                                                className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-900/20 rounded-md transition-colors opacity-50 group-hover:opacity-100"
-                                                                disabled={items.length === 1}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div className="p-3 bg-slate-900 border-t border-slate-800">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            onClick={addItem}
-                                            className="text-brand-highlight hover:text-white hover:bg-brand/20 gap-2 h-9"
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                            Add New Row
-                                        </Button>
-                                    </div>
+                                {/* Add Items Button */}
+                                <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/20 p-6">
+                                    <Button
+                                        type="button"
+                                        onClick={() => setShowAddItemsModal(true)}
+                                        className="w-full bg-brand hover:bg-brand/90 text-white h-12 text-base gap-2"
+                                    >
+                                        <Plus className="h-5 w-5" />
+                                        {items.length === 0 ? 'Add Items' : 'Add More Items'}
+                                    </Button>
                                 </div>
+
+                                {/* Items Summary - Show only if items exist */}
+                                {items.length > 0 && (
+                                    <div className="rounded-xl border border-slate-800 overflow-hidden bg-[#1e293b]/20">
+                                        <div className="overflow-x-auto custom-scrollbar">
+                                            <table className="w-full text-sm text-left">
+                                                <thead className="bg-slate-900/80 text-slate-400 font-medium uppercase text-xs tracking-wider">
+                                                    <tr>
+                                                        <th className="px-4 py-3 w-12 text-center">#</th>
+                                                        <th className="px-3 py-3">Item Name</th>
+                                                        <th className="px-3 py-3">Description</th>
+                                                        <th className="px-3 py-3 text-right">Qty</th>
+                                                        <th className="px-3 py-3">UOM</th>
+                                                        {enableWeight && <th className="px-3 py-3 text-right">Total Wt</th>}
+                                                        {enableSqft && <th className="px-3 py-3 text-right">Total SqFt</th>}
+                                                        <th className="px-3 py-3 text-right">Rate</th>
+                                                        <th className="px-3 py-3 text-center w-16">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-800">
+                                                    {items.map((item, index) => (
+                                                        <tr key={item.id} className="hover:bg-slate-800/30 transition-colors group">
+                                                            <td className="px-4 py-3 text-center text-slate-500">{index + 1}</td>
+                                                            <td className="px-3 py-3 text-slate-200 font-medium">{item.itemName}</td>
+                                                            <td className="px-3 py-3 text-slate-400 max-w-[200px] truncate" title={item.description}>
+                                                                {item.description || '-'}
+                                                            </td>
+                                                            <td className="px-3 py-3 text-right text-slate-200 font-medium">{item.quantity}</td>
+                                                            <td className="px-3 py-3 text-slate-300">{item.uom}</td>
+                                                            {enableWeight && (
+                                                                <td className="px-3 py-3 text-right text-teal-300 font-medium">{item.totalWeight}</td>
+                                                            )}
+                                                            {enableSqft && (
+                                                                <td className="px-3 py-3 text-right text-blue-300 font-medium">{item.totalSqft}</td>
+                                                            )}
+                                                            <td className="px-3 py-3 text-right text-amber-300 font-medium">
+                                                                {item.rate ? `₹${item.rate}` : '-'}
+                                                            </td>
+                                                            <td className="px-3 py-3 text-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeItem(item.id)}
+                                                                    className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-900/20 rounded-md transition-colors opacity-50 group-hover:opacity-100"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
                             </section>
 
                             {/* Additional Info Section - ORIGINAL DESIGN */}
@@ -729,6 +563,15 @@ export function NewDCSheet() {
                     setShowSupplierDropdown(false)
                     setShowCreateSupplier(false)
                 }}
+            />
+
+            {/* Add Items Modal */}
+            <AddItemsModal
+                open={showAddItemsModal}
+                onOpenChange={setShowAddItemsModal}
+                onConfirm={handleItemsConfirm}
+                enableWeight={enableWeight}
+                enableSqft={enableSqft}
             />
         </>
     )

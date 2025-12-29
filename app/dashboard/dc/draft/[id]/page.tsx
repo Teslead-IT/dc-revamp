@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, User, Package, Truck, Calendar, FileText, Loader2, Edit, Trash2, Save, X, Plus } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DCDeleteDialog } from "@/components/dc-grid/dc-delete-dialog"
-import { toast } from "sonner"
+import { showToast as toast } from "@/lib/toast-service"
 
 interface EditableItem {
     id?: number
@@ -888,7 +888,7 @@ export default function DraftDCViewPage() {
                         <CardHeader>
                             <CardTitle className="text-xl text-white flex items-center gap-2">
                                 <Calendar className="h-5 w-5 text-brand" />
-                                Metadata
+                                Other Details
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">

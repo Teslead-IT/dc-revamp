@@ -13,7 +13,7 @@
 
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from "@tanstack/react-query"
 import { externalApi, type DraftDCItemsResponse, type CreateDraftDCItemsData } from "@/lib/api-client"
-import { toast } from "sonner"
+import { showToast as toast } from "@/lib/toast-service"
 
 // ============= Query Keys =============
 
@@ -264,6 +264,10 @@ export function useDeleteDraftDCItem() {
             if (data.draftId) {
                 queryClient.invalidateQueries({ queryKey: ['draft-dc', data.draftId] })
             }
+            toast.success("Draft DC item deleted successfully")
+        },
+        onError: (error: any) => {
+            toast.error(error.message || "Failed to delete draft DC item")
         },
     })
 }

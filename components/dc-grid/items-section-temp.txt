@@ -1,0 +1,96 @@
+                            {/* Line Items Section - MODAL APPROACH */}
+                            <section className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
+                                        <Package className="h-5 w-5" />
+                                        Line Items ({items.length})
+                                    </h3>
+                                    <div className="flex items-center gap-4 bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800">
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="enableWeight"
+                                                checked={enableWeight}
+                                                onCheckedChange={(checked) => setEnableWeight(checked as boolean)}
+                                                className="border-slate-500 data-[state=checked]:bg-brand data-[state=checked]:border-brand"
+                                            />
+                                            <Label htmlFor="enableWeight" className="text-sm text-slate-300 cursor-pointer">Weight</Label>
+                                        </div>
+                                        <div className="w-px h-4 bg-slate-700"></div>
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="enableSqft"
+                                                checked={enableSqft}
+                                                onCheckedChange={(checked) => setEnableSqft(checked as boolean)}
+                                                className="border-slate-500 data-[state=checked]:bg-brand data-[state=checked]:border-brand"
+                                            />
+                                            <Label htmlFor="enableSqft" className="text-sm text-slate-300 cursor-pointer">Sq.Ft</Label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Add Items Button */}
+                                <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/20 p-6">
+                                    <Button
+                                        type="button"
+                                        onClick={() => setShowAddItemsModal(true)}
+                                        className="w-full bg-brand hover:bg-brand/90 text-white h-12 text-base gap-2"
+                                    >
+                                        <Plus className="h-5 w-5" />
+                                        {items.length === 0 ? 'Add Items' : 'Add More Items'}
+                                    </Button>
+                                </div>
+
+                                {/* Items Summary - Show only if items exist */}
+                                {items.length > 0 && (
+                                    <div className="rounded-xl border border-slate-800 overflow-hidden bg-[#1e293b]/20">
+                                        <div className="overflow-x-auto custom-scrollbar">
+                                            <table className="w-full text-sm text-left">
+                                                <thead className="bg-slate-900/80 text-slate-400 font-medium uppercase text-xs tracking-wider">
+                                                    <tr>
+                                                        <th className="px-4 py-3 w-12 text-center">#</th>
+                                                        <th className="px-3 py-3">Item Name</th>
+                                                        <th className="px-3 py-3">Description</th>
+                                                        <th className="px-3 py-3 text-right">Qty</th>
+                                                        <th className="px-3 py-3">UOM</th>
+                                                        {enableWeight && <th className="px-3 py-3 text-right">Total Wt</th>}
+                                                        {enableSqft && <th className="px-3 py-3 text-right">Total SqFt</th>}
+                                                        <th className="px-3 py-3 text-right">Rate</th>
+                                                        <th className="px-3 py-3 text-center w-16">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-800">
+                                                    {items.map((item, index) => (
+                                                        <tr key={item.id} className="hover:bg-slate-800/30 transition-colors group">
+                                                            <td className="px-4 py-3 text-center text-slate-500">{index + 1}</td>
+                                                            <td className="px-3 py-3 text-slate-200 font-medium">{item.itemName}</td>
+                                                            <td className="px-3 py-3 text-slate-400 max-w-[200px] truncate" title={item.description}>
+                                                                {item.description || '-'}
+                                                            </td>
+                                                            <td className="px-3 py-3 text-right text-slate-200 font-medium">{item.quantity}</td>
+                                                            <td className="px-3 py-3 text-slate-300">{item.uom}</td>
+                                                            {enableWeight && (
+                                                                <td className="px-3 py-3 text-right text-teal-300 font-medium">{item.totalWeight}</td>
+                                                            )}
+                                                            {enableSqft && (
+                                                                <td className="px-3 py-3 text-right text-blue-300 font-medium">{item.totalSqft}</td>
+                                                            )}
+                                                            <td className="px-3 py-3 text-right text-amber-300 font-medium">
+                                                                {item.rate ? `₹${item.rate}` : '-'}
+                                                            </td>
+                                                            <td className="px-3 py-3 text-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeItem(item.id)}
+                                                                    className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-900/20 rounded-md transition-colors opacity-50 group-hover:opacity-100"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </section>

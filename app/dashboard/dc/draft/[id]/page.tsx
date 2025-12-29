@@ -3,31 +3,37 @@
 import React, { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useDraftDC, useDeleteDraftDC, useUpdateDraftDC } from "@/hooks/use-draft-dc"
-import { useUpdateSupplier } from "@/hooks/use-suppliers"
+import { useSearchSuppliers } from "@/hooks/use-suppliers"
 import { useCreateDraftDCItems, useUpdateDraftDCItems, useDeleteDraftDCItem } from "@/hooks/use-draft-dc-items"
+import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, User, Package, Truck, Calendar, FileText, Loader2, Edit, Trash2, Save, X, Plus } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { ArrowLeft, User, Package, Truck, Calendar, FileText, Loader2, Edit, Trash2, Save, X, Plus, RefreshCcw } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DCDeleteDialog } from "@/components/dc-grid/dc-delete-dialog"
-import { toast } from "sonner"
+import { AddItemsModal } from "@/components/dc-grid/add-items-modal"
+import { CreateSupplierModal } from "@/components/dc-grid/create-supplier-modal"
+import { showToast as toast } from "@/lib/toast-service"
+import type { Supplier } from "@/lib/api-client"
 
-interface EditableItem {
-    id?: number
-    itemId?: number
+interface ItemRow {
+    id: number // Database numeric ID
+    itemId?: string // String ID like "DCITEM000012"
     itemName: string
-    itemDescription: string
+    description: string
     projectName: string
     projectIncharge: string
-    quantity: number
+    quantity: string
     uom: string
-    weightPerUnit: number
-    totalWeight: number
-    squareFeetPerUnit: number
-    totalSquareFeet: number
-    ratePerEach: number
+    weightPerUnit: string
+    totalWeight: string
+    sqftPerUnit: string
+    totalSqft: string
+    rate: string
     remarks: string
     notes: string
 }
@@ -36,11 +42,11 @@ export default function DraftDCViewPage() {
     const params = useParams()
     const router = useRouter()
     const draftId = params.id as string
+    const queryClient = useQueryClient()
 
     const { data: draftDC, isLoading, error } = useDraftDC(draftId)
     const deleteDraftDC = useDeleteDraftDC()
     const updateDraftDC = useUpdateDraftDC()
-    const updateSupplier = useUpdateSupplier()
     const createDraftDCItems = useCreateDraftDCItems()
     const updateDraftDCItems = useUpdateDraftDCItems()
     const deleteDraftDCItem = useDeleteDraftDCItem()
@@ -48,16 +54,24 @@ export default function DraftDCViewPage() {
     const [isEditMode, setIsEditMode] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [deleteItemDialogOpen, setDeleteItemDialogOpen] = useState(false)
+    const [itemToDelete, setItemToDelete] = useState<number | null>(null)
     const [isSaving, setIsSaving] = useState(false)
+
+    // Supplier management
+    const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
+    const [showSupplierSearch, setShowSupplierSearch] = useState(false)
+    const [showCreateSupplier, setShowCreateSupplier] = useState(false)
+    const [supplierSearch, setSupplierSearch] = useState('')
+    const [showSupplierDropdown, setShowSupplierDropdown] = useState(false)
+    const { data: searchResults = [], isLoading: isSearching, error: searchError } = useSearchSuppliers(supplierSearch)
+
+    // Items management
+    const [showAddItemsModal, setShowAddItemsModal] = useState(false)
+    const [items, setItems] = useState<ItemRow[]>([])
 
     // Editable state for DC details
     const [editableDC, setEditableDC] = useState<any>({})
-
-    // Editable state for supplier/party details
-    const [editableSupplier, setEditableSupplier] = useState<any>({})
-
-    // Editable state for items
-    const [editableItems, setEditableItems] = useState<EditableItem[]>([])
 
     useEffect(() => {
         if (draftDC) {
@@ -73,9 +87,9 @@ export default function DraftDCViewPage() {
                 showSquareFeet: draft.showSquareFeet
             })
 
-            // Check if party details are in a nested object or flattened
+            // Set supplier from draft
             const partyDetails = draft.partyDetails || draft
-            setEditableSupplier({
+            setSelectedSupplier({
                 partyId: draft.partyId,
                 partyName: partyDetails.partyName || '',
                 addressLine1: partyDetails.partyAddressLine1 || partyDetails.addressLine1 || '',
@@ -87,23 +101,23 @@ export default function DraftDCViewPage() {
                 gstinNumber: partyDetails.partyGstinNumber || partyDetails.gstinNumber || '',
                 email: partyDetails.partyEmail || partyDetails.email || '',
                 phone: partyDetails.partyPhone || partyDetails.phone || ''
-            })
+            } as Supplier)
 
-            setEditableItems(draft.draftDcItems?.map((item: any) => ({
+            // Convert draft items to ItemRow format
+            setItems(draft.draftDcItems?.map((item: any) => ({
                 id: item.id,
-                itemId: item.itemId,
-                draftId: item.draftId,
+                itemId: item.itemId, // Capture the string itemId (DCITEM000012)
                 itemName: item.itemName,
-                itemDescription: item.itemDescription,
+                description: item.itemDescription,
                 projectName: item.projectName,
                 projectIncharge: item.projectIncharge,
-                quantity: item.quantity,
+                quantity: String(item.quantity),
                 uom: item.uom,
-                weightPerUnit: item.weightPerUnit,
-                totalWeight: item.totalWeight,
-                squareFeetPerUnit: item.squareFeetPerUnit,
-                totalSquareFeet: item.totalSquareFeet,
-                ratePerEach: item.ratePerEach,
+                weightPerUnit: String(item.weightPerUnit),
+                totalWeight: String(item.totalWeight),
+                sqftPerUnit: String(item.squareFeetPerUnit),
+                totalSqft: String(item.totalSquareFeet),
+                rate: String(item.ratePerEach),
                 remarks: item.remarks,
                 notes: item.notes
             })) || [])
@@ -131,7 +145,7 @@ export default function DraftDCViewPage() {
                 })
 
                 const partyDetails = draft.partyDetails || draft
-                setEditableSupplier({
+                setSelectedSupplier({
                     partyId: draft.partyId,
                     partyName: partyDetails.partyName || '',
                     addressLine1: partyDetails.partyAddressLine1 || partyDetails.addressLine1 || '',
@@ -143,90 +157,85 @@ export default function DraftDCViewPage() {
                     gstinNumber: partyDetails.partyGstinNumber || partyDetails.gstinNumber || '',
                     email: partyDetails.partyEmail || partyDetails.email || '',
                     phone: partyDetails.partyPhone || partyDetails.phone || ''
-                })
+                } as Supplier)
 
-                setEditableItems(draft.draftDcItems?.map((item: any) => ({
+                setItems(draft.draftDcItems?.map((item: any) => ({
                     id: item.id,
-                    itemId: item.itemId,
-                    draftId: item.draftId,
+                    itemId: item.itemId, // Capture the string itemId (DCITEM000012)
                     itemName: item.itemName,
-                    itemDescription: item.itemDescription,
+                    description: item.itemDescription,
                     projectName: item.projectName,
                     projectIncharge: item.projectIncharge,
-                    quantity: item.quantity,
+                    quantity: String(item.quantity),
                     uom: item.uom,
-                    weightPerUnit: item.weightPerUnit,
-                    totalWeight: item.totalWeight,
-                    squareFeetPerUnit: item.squareFeetPerUnit,
-                    totalSquareFeet: item.totalSquareFeet,
-                    ratePerEach: item.ratePerEach,
+                    weightPerUnit: String(item.weightPerUnit),
+                    totalWeight: String(item.totalWeight),
+                    sqftPerUnit: String(item.squareFeetPerUnit),
+                    totalSqft: String(item.totalSquareFeet),
+                    rate: String(item.ratePerEach),
                     remarks: item.remarks,
                     notes: item.notes
                 })) || [])
             }
             setHasChanges(false)
+            setShowSupplierSearch(false)
         }
         setIsEditMode(!isEditMode)
     }
 
-    const handleAddNewItem = () => {
-        setEditableItems([...editableItems, {
-            itemName: '',
-            itemDescription: '',
-            projectName: '',
-            projectIncharge: '',
-            quantity: 0,
-            uom: '',
-            weightPerUnit: 0,
-            totalWeight: 0,
-            squareFeetPerUnit: 0,
-            totalSquareFeet: 0,
-            ratePerEach: 0,
-            remarks: '',
-            notes: ''
-        }])
+    const handleSupplierSelect = (supplier: Supplier) => {
+        setSelectedSupplier(supplier)
+        setSupplierSearch(supplier.partyName)
+        setShowSupplierDropdown(false)
+        setShowSupplierSearch(false)
         setHasChanges(true)
     }
 
-    const handleRemoveItem = async (index: number) => {
-        const item = editableItems[index]
+    const handleSupplierSearchChange = (value: string) => {
+        setSupplierSearch(value)
+        setShowSupplierDropdown(value.length >= 2)
+    }
 
-        // If item has an ID, it's an existing item - delete from DB
-        if (item.id) {
-            if (confirm(`Delete "${item.itemName}"? This action cannot be undone.`)) {
-                try {
-                    await deleteDraftDCItem.mutateAsync(item.id)
-                    toast.success('Item deleted successfully')
-                    // Remove from local state after successful delete
-                    setEditableItems(editableItems.filter((_, i) => i !== index))
-                } catch (error: any) {
-                    toast.error(error.message || 'Failed to delete item')
-                }
-            }
-        } else {
-            // New item not yet saved - just remove from list
-            setEditableItems(editableItems.filter((_, i) => i !== index))
-        }
+    const handleItemsConfirm = (updatedItems: ItemRow[]) => {
+        setItems(updatedItems)
         setHasChanges(true)
     }
 
-    const handleItemChange = (index: number, field: keyof EditableItem, value: any) => {
-        const newItems = [...editableItems]
-        newItems[index] = { ...newItems[index], [field]: value }
+    const handleRemoveItem = (itemNumericId: number) => {
+        setItemToDelete(itemNumericId)
+        setDeleteItemDialogOpen(true)
+    }
 
-        // Auto-calculate totals
-        if (field === 'quantity' || field === 'weightPerUnit') {
-            newItems[index].totalWeight = newItems[index].quantity * newItems[index].weightPerUnit
-        }
-        if (field === 'quantity' || field === 'squareFeetPerUnit') {
-            newItems[index].totalSquareFeet = newItems[index].quantity * newItems[index].squareFeetPerUnit
+    const confirmItemDelete = async () => {
+        if (itemToDelete === null) return
+
+        const item = items.find(i => i.id === itemToDelete)
+        if (!item) return
+
+        if (!item.itemId) {
+            toast.error('Cannot delete item: itemId not found')
+            return
         }
 
-        setEditableItems(newItems)
-        setHasChanges(true)
+        try {
+            // Use itemId (string like "DCITEM000012") not numeric id
+            await deleteDraftDCItem.mutateAsync(item.itemId)
+            toast.success('Item deleted successfully')
+            setItems(items.filter(i => i.id !== itemToDelete))
+            setHasChanges(true)
+            setDeleteItemDialogOpen(false)
+            setItemToDelete(null)
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to delete item')
+        }
     }
 
     const handleSaveAll = async () => {
+        if (!selectedSupplier) {
+            toast.error('Please select a supplier')
+            return
+        }
+
         setIsSaving(true)
 
         const updates: string[] = []
@@ -234,11 +243,11 @@ export default function DraftDCViewPage() {
         try {
             const draft = draftDC as any
 
-            // 1. Update Draft DC
-            console.log('Step 1: Updating Draft DC...')
+            // 1. Update Draft DC (including supplier change and showWeight/showSquareFeet)
             await updateDraftDC.mutateAsync({
                 id: draftId,
                 data: {
+                    partyId: selectedSupplier.partyId,
                     dcType: editableDC.dcType,
                     process: editableDC.process,
                     dcDate: editableDC.dcDate,
@@ -248,89 +257,72 @@ export default function DraftDCViewPage() {
                     showSquareFeet: editableDC.showSquareFeet
                 }
             })
-            console.log('✓ Draft DC updated successfully')
             updates.push('DC Details')
 
-            // 2. Update Supplier (if partyId exists)
-            if (editableSupplier.partyId) {
-                console.log('Step 2: Updating Supplier...')
-                await updateSupplier.mutateAsync({
-                    id: editableSupplier.partyId,
-                    data: {
-                        partyName: editableSupplier.partyName,
-                        addressLine1: editableSupplier.addressLine1,
-                        addressLine2: editableSupplier.addressLine2,
-                        state: editableSupplier.state,
-                        city: editableSupplier.city,
-                        pinCode: editableSupplier.pinCode,
-                        stateCode: editableSupplier.stateCode,
-                        gstinNumber: editableSupplier.gstinNumber,
-                        email: editableSupplier.email,
-                        phone: editableSupplier.phone
-                    }
-                })
-                console.log('✓ Supplier updated successfully')
-                updates.push('Supplier Details')
-            }
+            // 2. Separate existing items from new items
+            const existingItems = items.filter(item => item.itemId) // Has itemId = existing
+            const newItems = items.filter(item => !item.itemId) // No itemId = new
 
-            // 3. Add new items
-            const newItems = editableItems.filter(item => !item.id)
-            if (newItems.length > 0) {
-                console.log(`Step 3: Adding ${newItems.length} new item(s)...`)
-                await createDraftDCItems.mutateAsync({
-                    draftId: parseInt(draftId),
-                    items: newItems.map(item => ({
-                        itemName: item.itemName,
-                        description: item.itemDescription,
-                        projectName: item.projectName,
-                        projectIncharge: item.projectIncharge,
-                        quantity: item.quantity,
-                        uom: item.uom,
-                        weightPerUnit: item.weightPerUnit,
-                        totalWeight: item.totalWeight,
-                        squareFeetPerUnit: item.squareFeetPerUnit,
-                        totalSquareFeet: item.totalSquareFeet,
-                        ratePerEach: item.ratePerEach,
-                        remarks: item.remarks,
-                        notes: item.notes
-                    }))
-                })
-                console.log(`✓ ${newItems.length} new item(s) added successfully`)
-                updates.push(`${newItems.length} New Items`)
-            }
-
-            // 4. Update existing items
-            const existingItems = editableItems.filter(item => item.id)
+            // 3. Update existing items using update endpoint (only send itemId + changed fields)
             if (existingItems.length > 0) {
-                console.log(`Step 4: Updating ${existingItems.length} existing item(s)...`)
+                const updateItemsData = existingItems.map(item => ({
+                    itemId: item.itemId,
+                    itemName: item.itemName,
+                    itemDescription: item.description,
+                    projectName: item.projectName,
+                    projectIncharge: item.projectIncharge,
+                    quantity: parseFloat(item.quantity) || 0,
+                    uom: item.uom || 'KG',
+                    weightPerUnit: editableDC.showWeight ? (parseFloat(item.weightPerUnit) || 0) : 0,
+                    totalWeight: editableDC.showWeight ? (parseFloat(item.totalWeight) || 0) : 0,
+                    squareFeetPerUnit: editableDC.showSquareFeet ? (parseFloat(item.sqftPerUnit) || 0) : 0,
+                    totalSquareFeet: editableDC.showSquareFeet ? (parseFloat(item.totalSqft) || 0) : 0,
+                    ratePerEach: parseFloat(item.rate) || 0,
+                    remarks: item.remarks || '',
+                    notes: item.notes || '',
+                }))
+
                 await updateDraftDCItems.mutateAsync({
                     id: draftId,
-                    items: existingItems.map(item => ({
-                        itemId: item.itemId,
-                        itemName: item.itemName,
-                        itemDescription: item.itemDescription,
-                        projectName: item.projectName,
-                        projectIncharge: item.projectIncharge,
-                        quantity: item.quantity,
-                        uom: item.uom,
-                        weightPerUnit: item.weightPerUnit,
-                        totalWeight: item.totalWeight,
-                        squareFeetPerUnit: item.squareFeetPerUnit,
-                        totalSquareFeet: item.totalSquareFeet,
-                        ratePerEach: item.ratePerEach,
-                        remarks: item.remarks,
-                        notes: item.notes
-                    }))
+                    items: updateItemsData
                 })
-                console.log(`✓ ${existingItems.length} existing item(s) updated successfully`)
                 updates.push(`${existingItems.length} Items Updated`)
             }
 
-            // Success: All updates completed
-            console.log('✓ All updates completed successfully')
+            // 4. Create new items using create endpoint
+            if (newItems.length > 0) {
+                const createItemsData = newItems.map(item => ({
+                    itemName: item.itemName,
+                    itemDescription: item.description,
+                    uom: item.uom || 'KG',
+                    quantity: parseFloat(item.quantity) || 0,
+                    weightPerUnit: editableDC.showWeight ? (parseFloat(item.weightPerUnit) || 0) : 0,
+                    totalWeight: editableDC.showWeight ? (parseFloat(item.totalWeight) || 0) : 0,
+                    ratePerEach: parseFloat(item.rate) || 0,
+                    squareFeetPerUnit: editableDC.showSquareFeet ? (parseFloat(item.sqftPerUnit) || 0) : 0,
+                    totalSquareFeet: editableDC.showSquareFeet ? (parseFloat(item.totalSqft) || 0) : 0,
+                    remarks: item.remarks || '',
+                    projectName: item.projectName || '',
+                    projectIncharge: item.projectIncharge || '',
+                    notes: item.notes || '',
+                }))
+
+                await createDraftDCItems.mutateAsync({
+                    draftId: draftId,
+                    partyId: selectedSupplier.partyId,
+                    items: createItemsData
+                })
+                updates.push(`${newItems.length} New Items Added`)
+            }
+
+            // Success
             toast.success(`Successfully updated: ${updates.join(', ')}`, {
                 description: 'All changes have been saved'
             })
+
+            // Invalidate and refetch draft DC data to show updates
+            await queryClient.invalidateQueries({ queryKey: ['draft-dc', 'detail', draftId] })
+            await queryClient.refetchQueries({ queryKey: ['draft-dc', 'detail', draftId] })
 
             setIsEditMode(false)
             setHasChanges(false)
@@ -444,11 +436,20 @@ export default function DraftDCViewPage() {
                 </div>
             </div>
 
+            {/* Delete DC Dialog */}
             <DCDeleteDialog
                 open={deleteDialogOpen}
                 onOpenChange={setDeleteDialogOpen}
                 onConfirm={handleDelete}
                 itemName={draft.draftId}
+            />
+
+            {/* Delete Item Dialog */}
+            <DCDeleteDialog
+                open={deleteItemDialogOpen}
+                onOpenChange={setDeleteItemDialogOpen}
+                onConfirm={confirmItemDelete}
+                itemName={itemToDelete !== null ? items.find(i => i.id === itemToDelete)?.itemName || 'Item' : 'Item'}
             />
 
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -480,10 +481,10 @@ export default function DraftDCViewPage() {
                                         <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-slate-800 border-slate-700">
+                                        <SelectContent className="bg-slate-800 border-slate-700 text-white">
                                             <SelectItem value="SPM">SPM</SelectItem>
-                                            <SelectItem value="NSPM">NSPM</SelectItem>
-                                            <SelectItem value="Service">Service</SelectItem>
+                                            <SelectItem value="QC">QC</SelectItem>
+                                            <SelectItem value="VALVE">VALVE</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 ) : (
@@ -578,17 +579,58 @@ export default function DraftDCViewPage() {
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-xl text-white flex items-center gap-2">
                                 <Package className="h-5 w-5 text-brand" />
-                                Items ({editableItems.length})
+                                Items ({items.length})
                             </CardTitle>
                             {isEditMode && (
-                                <Button
-                                    onClick={handleAddNewItem}
-                                    size="sm"
-                                    className="bg-brand hover:bg-brand/90"
-                                >
-                                    <Plus className="h-4 w-4 mr-1" />
-                                    Add Item
-                                </Button>
+                                <div className="flex items-center gap-4">
+                                    {/* Show Weight Checkbox */}
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="showWeight"
+                                            checked={editableDC.showWeight}
+                                            onCheckedChange={(checked) => {
+                                                setEditableDC({ ...editableDC, showWeight: !!checked })
+                                                setHasChanges(true)
+                                            }}
+                                            className="border-slate-600 data-[state=checked]:bg-brand data-[state=checked]:border-brand"
+                                        />
+                                        <Label
+                                            htmlFor="showWeight"
+                                            className="text-sm font-medium text-slate-300 cursor-pointer"
+                                        >
+                                            Show Weight
+                                        </Label>
+                                    </div>
+
+                                    {/* Show Square Feet Checkbox */}
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="showSquareFeet"
+                                            checked={editableDC.showSquareFeet}
+                                            onCheckedChange={(checked) => {
+                                                setEditableDC({ ...editableDC, showSquareFeet: !!checked })
+                                                setHasChanges(true)
+                                            }}
+                                            className="border-slate-600 data-[state=checked]:bg-brand data-[state=checked]:border-brand"
+                                        />
+                                        <Label
+                                            htmlFor="showSquareFeet"
+                                            className="text-sm font-medium text-slate-300 cursor-pointer"
+                                        >
+                                            Show Sq.Ft
+                                        </Label>
+                                    </div>
+
+                                    {/* Update Items Button */}
+                                    <Button
+                                        onClick={() => setShowAddItemsModal(true)}
+                                        size="sm"
+                                        className="bg-brand hover:bg-brand/90"
+                                    >
+                                        <Edit className="h-4 w-4 mr-1" />
+                                        Update Items
+                                    </Button>
+                                </div>
                             )}
                         </CardHeader>
                         <CardContent>
@@ -603,13 +645,13 @@ export default function DraftDCViewPage() {
                                             <th className="px-4 py-3 text-left">Incharge</th>
                                             <th className="px-4 py-3 text-right">Qty</th>
                                             <th className="px-4 py-3 text-left">UOM</th>
-                                            {draft.showWeight && (
+                                            {(isEditMode ? editableDC.showWeight : draft.showWeight) && (
                                                 <>
                                                     <th className="px-4 py-3 text-right">Wt/Unit</th>
                                                     <th className="px-4 py-3 text-right">Total Wt</th>
                                                 </>
                                             )}
-                                            {draft.showSquareFeet && (
+                                            {(isEditMode ? editableDC.showSquareFeet : draft.showSquareFeet) && (
                                                 <>
                                                     <th className="px-4 py-3 text-right">SqFt/Unit</th>
                                                     <th className="px-4 py-3 text-right">Total SqFt</th>
@@ -621,144 +663,54 @@ export default function DraftDCViewPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="text-slate-300 divide-y divide-slate-800">
-                                        {editableItems.map((item, index) => (
-                                            <tr key={item.id || `new-${index}`} className="hover:bg-slate-800/30">
+                                        {items.map((item, index) => (
+                                            <tr key={item.id || `item-${index}`} className="hover:bg-slate-800/30">
                                                 <td className="px-4 py-3">{index + 1}</td>
                                                 <td className="px-4 py-3">
-                                                    {isEditMode ? (
-                                                        <Input
-                                                            value={item.itemName}
-                                                            onChange={(e) => handleItemChange(index, 'itemName', e.target.value)}
-                                                            className="min-w-[150px] bg-slate-800 border-slate-700 text-white h-9"
-                                                        />
-                                                    ) : (
-                                                        <div>
-                                                            <div className="font-medium text-white">{item.itemName}</div>
-                                                            {item.notes && (
-                                                                <div className="text-xs text-slate-500 mt-1 italic">
-                                                                    Note: {item.notes}
-                                                                </div>
-                                                            )}
+                                                    <div className="font-medium text-white">{item.itemName}</div>
+                                                    {item.notes && (
+                                                        <div className="text-xs text-slate-500 mt-1 italic">
+                                                            Note: {item.notes}
                                                         </div>
                                                     )}
                                                 </td>
+                                                <td className="px-4 py-3">{item.description}</td>
                                                 <td className="px-4 py-3">
-                                                    {isEditMode ? (
-                                                        <Input
-                                                            value={item.itemDescription}
-                                                            onChange={(e) => handleItemChange(index, 'itemDescription', e.target.value)}
-                                                            className="min-w-[150px] bg-slate-800 border-slate-700 text-white h-9"
-                                                        />
-                                                    ) : (
-                                                        item.itemDescription
-                                                    )}
+                                                    <span className="text-slate-400">{item.projectName || '-'}</span>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    {isEditMode ? (
-                                                        <Input
-                                                            value={item.projectName}
-                                                            onChange={(e) => handleItemChange(index, 'projectName', e.target.value)}
-                                                            className="min-w-[120px] bg-slate-800 border-slate-700 text-white h-9"
-                                                        />
-                                                    ) : (
-                                                        <span className="text-slate-400">{item.projectName || '-'}</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    {isEditMode ? (
-                                                        <Input
-                                                            value={item.projectIncharge}
-                                                            onChange={(e) => handleItemChange(index, 'projectIncharge', e.target.value)}
-                                                            className="min-w-[120px] bg-slate-800 border-slate-700 text-white h-9"
-                                                        />
-                                                    ) : (
-                                                        <span className="text-slate-400">{item.projectIncharge || '-'}</span>
-                                                    )}
+                                                    <span className="text-slate-400">{item.projectIncharge || '-'}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
-                                                    {isEditMode ? (
-                                                        <Input
-                                                            type="number"
-                                                            value={item.quantity}
-                                                            onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value) || 0)}
-                                                            className="w-20 bg-slate-800 border-slate-700 text-white h-9"
-                                                        />
-                                                    ) : (
-                                                        <span className="font-medium">{item.quantity}</span>
-                                                    )}
+                                                    <span className="font-medium">{item.quantity}</span>
                                                 </td>
-                                                <td className="px-4 py-3">
-                                                    {isEditMode ? (
-                                                        <Input
-                                                            value={item.uom}
-                                                            onChange={(e) => handleItemChange(index, 'uom', e.target.value)}
-                                                            className="w-20 bg-slate-800 border-slate-700 text-white h-9"
-                                                        />
-                                                    ) : (
-                                                        item.uom
-                                                    )}
-                                                </td>
-                                                {draft.showWeight && (
+                                                <td className="px-4 py-3">{item.uom}</td>
+                                                {(isEditMode ? editableDC.showWeight : draft.showWeight) && (
                                                     <>
                                                         <td className="px-4 py-3 text-right">
-                                                            {isEditMode ? (
-                                                                <Input
-                                                                    type="number"
-                                                                    value={item.weightPerUnit}
-                                                                    onChange={(e) => handleItemChange(index, 'weightPerUnit', parseFloat(e.target.value) || 0)}
-                                                                    className="w-24 bg-slate-800 border-slate-700 text-teal-300 h-9"
-                                                                />
-                                                            ) : (
-                                                                <span className="text-teal-300">{item.weightPerUnit}</span>
-                                                            )}
+                                                            <span className="text-teal-300">{item.weightPerUnit}</span>
                                                         </td>
                                                         <td className="px-4 py-3 text-right text-teal-300 font-medium">{item.totalWeight}</td>
                                                     </>
                                                 )}
-                                                {draft.showSquareFeet && (
+                                                {(isEditMode ? editableDC.showSquareFeet : draft.showSquareFeet) && (
                                                     <>
                                                         <td className="px-4 py-3 text-right">
-                                                            {isEditMode ? (
-                                                                <Input
-                                                                    type="number"
-                                                                    value={item.squareFeetPerUnit}
-                                                                    onChange={(e) => handleItemChange(index, 'squareFeetPerUnit', parseFloat(e.target.value) || 0)}
-                                                                    className="w-24 bg-slate-800 border-slate-700 text-blue-300 h-9"
-                                                                />
-                                                            ) : (
-                                                                <span className="text-blue-300">{item.squareFeetPerUnit}</span>
-                                                            )}
+                                                            <span className="text-blue-300">{item.sqftPerUnit}</span>
                                                         </td>
-                                                        <td className="px-4 py-3 text-right text-blue-300 font-medium">{item.totalSquareFeet}</td>
+                                                        <td className="px-4 py-3 text-right text-blue-300 font-medium">{item.totalSqft}</td>
                                                     </>
                                                 )}
                                                 <td className="px-4 py-3 text-right">
-                                                    {isEditMode ? (
-                                                        <Input
-                                                            type="number"
-                                                            value={item.ratePerEach}
-                                                            onChange={(e) => handleItemChange(index, 'ratePerEach', parseFloat(e.target.value) || 0)}
-                                                            className="w-24 bg-slate-800 border-slate-700 text-amber-300 h-9"
-                                                        />
-                                                    ) : (
-                                                        <span className="text-amber-300 font-medium">₹{item.ratePerEach}</span>
-                                                    )}
+                                                    <span className="text-amber-300 font-medium">₹{item.rate}</span>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    {isEditMode ? (
-                                                        <Input
-                                                            value={item.remarks}
-                                                            onChange={(e) => handleItemChange(index, 'remarks', e.target.value)}
-                                                            className="min-w-[150px] bg-slate-800 border-slate-700 text-white h-9"
-                                                        />
-                                                    ) : (
-                                                        <span className="text-slate-500 italic">{item.remarks || '-'}</span>
-                                                    )}
+                                                    <span className="text-slate-500 italic">{item.remarks || '-'}</span>
                                                 </td>
                                                 {isEditMode && (
                                                     <td className="px-4 py-3 text-center">
                                                         <Button
-                                                            onClick={() => handleRemoveItem(index)}
+                                                            onClick={() => handleRemoveItem(item.id)}
                                                             size="sm"
                                                             variant="ghost"
                                                             className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
@@ -780,106 +732,118 @@ export default function DraftDCViewPage() {
                 <div className="space-y-6">
                     {/* Party Details */}
                     <Card className="bg-slate-900/50 border-slate-800">
-                        <CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-xl text-white flex items-center gap-2">
                                 <User className="h-5 w-5 text-brand" />
-                                Party Details
+                                Supplier Details
                             </CardTitle>
+                            {isEditMode && !showSupplierSearch && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowSupplierSearch(true)}
+                                    className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 text-xs"
+                                >
+                                    <RefreshCcw className="h-3.5 w-3.5 mr-1" />
+                                    Change Supplier
+                                </Button>
+                            )}
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <div>
-                                <p className="text-slate-400 text-sm mb-1">Name</p>
-                                {isEditMode ? (
-                                    <Input
-                                        value={editableSupplier.partyName}
-                                        onChange={(e) => {
-                                            setEditableSupplier({ ...editableSupplier, partyName: e.target.value })
-                                            setHasChanges(true)
-                                        }}
-                                        className="bg-slate-800 border-slate-700 text-white"
-                                    />
-                                ) : (
-                                    <p className="text-white font-medium">{editableSupplier.partyName}</p>
-                                )}
-                            </div>
-                            <div>
-                                <p className="text-slate-400 text-sm mb-1">Address</p>
-                                {isEditMode ? (
-                                    <>
+                            {isEditMode && showSupplierSearch ? (
+                                <div className="space-y-4">
+                                    <div className="space-y-2 relative">
                                         <Input
-                                            value={editableSupplier.addressLine1}
-                                            onChange={(e) => {
-                                                setEditableSupplier({ ...editableSupplier, addressLine1: e.target.value })
-                                                setHasChanges(true)
-                                            }}
-                                            className="bg-slate-800 border-slate-700 text-white mb-2"
-                                            placeholder="Address Line 1"
-                                        />
-                                        <Input
-                                            value={editableSupplier.addressLine2 || ''}
-                                            onChange={(e) => {
-                                                setEditableSupplier({ ...editableSupplier, addressLine2: e.target.value })
-                                                setHasChanges(true)
-                                            }}
-                                            className="bg-slate-800 border-slate-700 text-white"
-                                            placeholder="Address Line 2"
-                                        />
-                                    </>
-                                ) : (
-                                    <p className="text-white text-sm">
-                                        {editableSupplier.addressLine1}
-                                        {editableSupplier.addressLine2 && <>, {editableSupplier.addressLine2}</>}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <p className="text-slate-400 text-sm mb-1">City</p>
-                                    {isEditMode ? (
-                                        <Input
-                                            value={editableSupplier.city}
-                                            onChange={(e) => {
-                                                setEditableSupplier({ ...editableSupplier, city: e.target.value })
-                                                setHasChanges(true)
-                                            }}
+                                            placeholder="Search supplier..."
+                                            value={supplierSearch}
+                                            onChange={(e) => handleSupplierSearchChange(e.target.value)}
                                             className="bg-slate-800 border-slate-700 text-white"
                                         />
-                                    ) : (
-                                        <p className="text-white text-sm">{editableSupplier.city}</p>
-                                    )}
+
+                                        {/* Autocomplete Dropdown */}
+                                        {showSupplierDropdown && (
+                                            <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                                {searchError ? (
+                                                    <div className="p-3 text-sm text-red-400">
+                                                        Error: {(searchError as Error).message}
+                                                    </div>
+                                                ) : isSearching ? (
+                                                    <div className="p-3 text-sm text-slate-400">Searching...</div>
+                                                ) : searchResults.length > 0 ? (
+                                                    searchResults.map((supplier) => (
+                                                        <button
+                                                            key={supplier.id}
+                                                            onClick={() => handleSupplierSelect(supplier)}
+                                                            className="w-full text-left px-4 py-2 hover:bg-slate-800 border-b border-slate-800 last:border-b-0"
+                                                        >
+                                                            <p className="font-medium text-slate-200">{supplier.partyName}</p>
+                                                            <p className="text-xs text-slate-400">{supplier.city}, {supplier.state}</p>
+                                                        </button>
+                                                    ))
+                                                ) : (
+                                                    <div className="p-4 text-center">
+                                                        <p className="text-sm text-slate-400 mb-2">No supplier found</p>
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setShowCreateSupplier(true)
+                                                                setShowSupplierDropdown(false)
+                                                            }}
+                                                            className="bg-brand hover:bg-brand/90"
+                                                        >
+                                                            <Plus className="w-3 h-3 mr-1" />
+                                                            Create New
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => setShowSupplierSearch(false)}
+                                            className="flex-1 bg-slate-700 text-slate-200 hover:bg-slate-600"
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-slate-400 text-sm mb-1">State</p>
-                                    {isEditMode ? (
-                                        <Input
-                                            value={editableSupplier.state}
-                                            onChange={(e) => {
-                                                setEditableSupplier({ ...editableSupplier, state: e.target.value })
-                                                setHasChanges(true)
-                                            }}
-                                            className="bg-slate-800 border-slate-700 text-white"
-                                        />
-                                    ) : (
-                                        <p className="text-white text-sm">{editableSupplier.state}</p>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-slate-400 text-sm mb-1">Pincode</p>
-                                {isEditMode ? (
-                                    <Input
-                                        type="number"
-                                        value={editableSupplier.pinCode}
-                                        onChange={(e) => {
-                                            setEditableSupplier({ ...editableSupplier, pinCode: parseInt(e.target.value) })
-                                            setHasChanges(true)
-                                        }}
-                                        className="bg-slate-800 border-slate-700 text-white"
-                                    />
-                                ) : (
-                                    <p className="text-white font-medium">{editableSupplier.pinCode}</p>
-                                )}
-                            </div>
+                            ) : selectedSupplier ? (
+                                <>
+                                    <div>
+                                        <p className="text-slate-400 text-sm mb-1">Name</p>
+                                        <p className="text-white font-medium">{selectedSupplier.partyName}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-400 text-sm mb-1">Address</p>
+                                        <p className="text-white text-sm">
+                                            {selectedSupplier.addressLine1}
+                                            {selectedSupplier.addressLine2 && <>, {selectedSupplier.addressLine2}</>}
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <p className="text-slate-400 text-sm mb-1">City</p>
+                                            <p className="text-white text-sm">{selectedSupplier.city}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-slate-400 text-sm mb-1">State</p>
+                                            <p className="text-white text-sm">{selectedSupplier.state}</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-400 text-sm mb-1">Pincode</p>
+                                        <p className="text-white font-medium">{selectedSupplier.pinCode}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-400 text-sm mb-1">GSTIN</p>
+                                        <p className="text-white font-mono text-sm">{selectedSupplier.gstinNumber || '-'}</p>
+                                    </div>
+                                </>
+                            ) : null}
                         </CardContent>
                     </Card>
 
@@ -888,7 +852,7 @@ export default function DraftDCViewPage() {
                         <CardHeader>
                             <CardTitle className="text-xl text-white flex items-center gap-2">
                                 <Calendar className="h-5 w-5 text-brand" />
-                                Metadata
+                                Other Details
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
@@ -908,6 +872,32 @@ export default function DraftDCViewPage() {
                     </Card>
                 </div>
             </div>
+
+            {/* Update Items Modal */}
+            <AddItemsModal
+                open={showAddItemsModal}
+                onOpenChange={setShowAddItemsModal}
+                onConfirm={handleItemsConfirm}
+                enableWeight={editableDC.showWeight}
+                enableSqft={editableDC.showSquareFeet}
+                initialItems={items}
+                mode="update"
+            />
+
+            {/* Create Supplier Modal */}
+            <CreateSupplierModal
+                open={showCreateSupplier}
+                onOpenChange={setShowCreateSupplier}
+                supplierName={supplierSearch}
+                onSupplierCreated={(supplier) => {
+                    setSelectedSupplier(supplier)
+                    setSupplierSearch(supplier.partyName)
+                    setShowSupplierDropdown(false)
+                    setShowSupplierSearch(false)
+                    setShowCreateSupplier(false)
+                    setHasChanges(true)
+                }}
+            />
         </div>
     )
 }

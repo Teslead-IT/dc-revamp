@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { externalApi } from "@/lib/api-client"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { showToast as toast } from "@/lib/toast-service"
 
 // Centralized query keys for auth
 export const authKeys = {

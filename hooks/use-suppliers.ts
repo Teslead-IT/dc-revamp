@@ -16,7 +16,7 @@
 
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from "@tanstack/react-query"
 import { externalApi, type Supplier, type CreateSupplierData } from "@/lib/api-client"
-import { toast } from "sonner"
+import { showToast as toast } from "@/lib/toast-service"
 
 // Query Keys - Centralized for better cache management
 export const supplierKeys = {

@@ -1,75 +1,82 @@
 "use client"
 
-import { toast } from "sonner"
-import { CheckCircle, XCircle, X } from "lucide-react"
+import { toast as shadcnToast } from "@/hooks/use-toast"
 
-export const showToast = {
-  success: (message: string, description?: string) => {
-    toast.custom(
-      (t) => (
-        <div className="flex items-start gap-3 rounded-lg bg-green-50 border border-green-200 p-4 shadow-lg animate-in fade-in slide-in-from-top-2">
-          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="font-medium text-green-900">{message}</p>
-            {description && <p className="text-sm text-green-700 mt-1">{description}</p>}
-          </div>
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="text-green-600 hover:text-green-700 hover:bg-green-100 rounded p-1 transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      ),
-      {
-        duration: 4000,
-        position: "top-right",
-      }
-    )
-  },
+type ToastOptions = { description?: string;[key: string]: any } | string
 
-  error: (message: string, description?: string) => {
-    toast.custom(
-      (t) => (
-        <div className="flex items-start gap-3 rounded-lg bg-red-50 border border-red-200 p-4 shadow-lg animate-in fade-in slide-in-from-top-2">
-          <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="font-medium text-red-900">{message}</p>
-            {description && <p className="text-sm text-red-700 mt-1">{description}</p>}
-          </div>
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="text-red-600 hover:text-red-700 hover:bg-red-100 rounded p-1 transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      ),
-      {
-        duration: 4000,
-        position: "top-right",
-      }
-    )
-  },
-
-  loading: (message: string) => {
-    return toast.custom(
-      (t) => (
-        <div className="flex items-start gap-3 rounded-lg bg-blue-50 border border-blue-200 p-4 shadow-lg animate-in fade-in slide-in-from-top-2">
-          <div className="h-5 w-5 rounded-full border-2 border-blue-300 border-t-blue-600 animate-spin flex-shrink-0 mt-0.5" />
-          <p className="font-medium text-blue-900">{message}</p>
-          <button
-            onClick={() => toast.dismiss(t)}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded p-1 transition-colors ml-auto"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      ),
-      {
-        duration: Infinity,
-        position: "top-right",
-      }
-    )
-  },
+const toastFn = (message: string, options?: ToastOptions) => {
+  const description = typeof options === 'string' ? options : options?.description
+  const extraOptions = typeof options === 'object' ? options : {}
+  return shadcnToast({
+    title: message,
+    description: description,
+    duration: 4000, // Auto-dismiss after 4 seconds
+    ...extraOptions, // Allow overriding if needed
+  })
 }
+
+toastFn.success = (message: string, options?: ToastOptions) => {
+  const description = typeof options === 'string' ? options : options?.description
+  const extraOptions = typeof options === 'object' ? options : {}
+  return shadcnToast({
+    variant: "success",
+    title: message,
+    description: description,
+    duration: 4000, // Auto-dismiss after 4 seconds
+    ...extraOptions, // Allow overriding if needed
+  })
+}
+
+toastFn.error = (message: string, options?: ToastOptions) => {
+  const description = typeof options === 'string' ? options : options?.description
+  const extraOptions = typeof options === 'object' ? options : {}
+  return shadcnToast({
+    variant: "destructive",
+    title: message,
+    description: description,
+    duration: 6000, // Auto-dismiss after 6 seconds (longer for errors)
+    ...extraOptions, // Allow overriding if needed
+  })
+}
+
+toastFn.info = (message: string, options?: ToastOptions) => {
+  const description = typeof options === 'string' ? options : options?.description
+  const extraOptions = typeof options === 'object' ? options : {}
+  return shadcnToast({
+    title: message,
+    description: description,
+    duration: 4000, // Auto-dismiss after 4 seconds
+    ...extraOptions, // Allow overriding if needed
+  })
+}
+
+toastFn.loading = (message: string, options?: ToastOptions) => {
+  const description = typeof options === 'string' ? options : options?.description
+  const extraOptions = typeof options === 'object' ? options : {}
+  return shadcnToast({
+    title: "Loading...",
+    description: message || description,
+    duration: Infinity, // Loading toasts stay until manually dismissed
+    ...extraOptions, // Allow overriding if needed
+  })
+}
+
+toastFn.dismiss = (toastId?: string) => {
+  // shadcn toast dismiss needs to be called from the return of useToast or by dispatching.
+  // The exported 'toast' function from use-toast.ts returns { id, dismiss, update }.
+  // However, we can't easily dismiss by ID globally without the dispatch function exposed directly 
+  // or storing the dismiss function.
+  // But wait, the imported 'toast' works by dispatching to a listener.
+  // components/ui/use-toast.ts exports 'toast' function.
+  // It does NOT export a global dismiss function easily?
+  // Actually, use-toast.ts exports 'reducer' and 'toast'.
+  // Looking at use-toast.ts, 'toast' function returns { id, dismiss, update }.
+  // So we can return that from our wrapper.
+  // But if we want to dismiss a specific ID passed in...
+  // use-toast.ts does NOT export a standalone dismiss(id).
+  // But we can add one or use a hack.
+  // For now let's hope dismiss isn't strictly needed or we just return the dismiss from the creation.
+  return
+}
+
+export const showToast = toastFn

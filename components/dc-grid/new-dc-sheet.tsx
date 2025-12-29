@@ -14,30 +14,22 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet"
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Trash2, User, FileText, Package, Loader2, X } from "lucide-react"
-import { toast } from "sonner"
-import {
-    CitySelect,
-    StateSelect,
-} from "react-country-state-city";
-import "react-country-state-city/dist/react-country-state-city.css";
+import { Plus, Trash2, User, FileText, Package, Loader2, Edit } from "lucide-react"
+import { showToast as toast } from "@/lib/toast-service"
+import { useCreateSupplier } from "@/hooks/use-suppliers"
 
 // Import React Query hooks
-import { useSearchSuppliers, useCreateSupplier } from "@/hooks/use-suppliers"
+import { useSearchSuppliers } from "@/hooks/use-suppliers"
 import { useCreateDraftDC } from "@/hooks/use-draft-dc"
 import { useCreateDraftDCItems } from "@/hooks/use-draft-dc-items"
 import { useQueryClient } from "@tanstack/react-query"
+import { AddItemsModal } from "./add-items-modal"
+import { CreateSupplierModal } from "./create-supplier-modal"
 
-import type { Supplier, CreateSupplierData, DCType } from "@/lib/api-client"
+import type { Supplier, DCType } from "@/lib/api-client"
 
 interface ItemRow {
     id: number
@@ -54,11 +46,6 @@ interface ItemRow {
     rate: string
     remarks: string
     notes: string
-}
-
-
-const GST_STATE_CODES: Record<string, number> = {
-    "Jammu and Kashmir": 1, "Himachal Pradesh": 2, "Punjab": 3, "Chandigarh": 4, "Uttarakhand": 5, "Haryana": 6, "Delhi": 7, "Rajasthan": 8, "Uttar Pradesh": 9, "Bihar": 10, "Sikkim": 11, "Arunachal Pradesh": 12, "Nagaland": 13, "Manipur": 14, "Mizoram": 15, "Tripura": 16, "Meghalaya": 17, "Assam": 18, "West Bengal": 19, "Jharkhand": 20, "Odisha": 21, "Chhattisgarh": 22, "Madhya Pradesh": 23, "Gujarat": 24, "Dadra and Nagar Haveli and Daman and Diu": 26, "Maharashtra": 27, "Karnataka": 29, "Goa": 30, "Lakshadweep": 31, "Kerala": 32, "Tamil Nadu": 33, "Puducherry": 34, "Andaman and Nicobar Islands": 35, "Telangana": 36, "Andhra Pradesh": 37, "Ladakh": 38
 }
 
 export function NewDCSheet() {
@@ -81,24 +68,8 @@ export function NewDCSheet() {
     // Items state
     const [enableWeight, setEnableWeight] = useState(true)
     const [enableSqft, setEnableSqft] = useState(true)
-    const [items, setItems] = useState<ItemRow[]>([
-        {
-            id: 1,
-            itemName: "",
-            description: "",
-            projectName: "",
-            projectIncharge: "",
-            quantity: "",
-            uom: "",
-            weightPerUnit: "",
-            totalWeight: "",
-            sqftPerUnit: "",
-            totalSqft: "",
-            rate: "",
-            remarks: "",
-            notes: "",
-        },
-    ])
+    const [showAddItemsModal, setShowAddItemsModal] = useState(false)
+    const [items, setItems] = useState<ItemRow[]>([])
 
     // React Query hooks
     const { data: searchResults = [], isLoading: isSearching, error: searchError } = useSearchSuppliers(supplierSearch)
@@ -117,57 +88,30 @@ export function NewDCSheet() {
         })
     }, [supplierSearch, searchResults, isSearching, searchError, showSupplierDropdown])
 
-    const addItem = () => {
-        setItems([
-            ...items,
-            {
-                id: items.length + 1,
-                itemName: "",
-                description: "",
-                projectName: "",
-                projectIncharge: "",
-                quantity: "",
-                uom: "",
-                weightPerUnit: "",
-                totalWeight: "",
-                sqftPerUnit: "",
-                totalSqft: "",
-                rate: "",
-                remarks: "",
-                notes: "",
-            },
-        ])
-    }
+    // Reset form when sheet closes
+    useEffect(() => {
+        if (!open) {
+            setSupplierSearch('')
+            setSelectedSupplier(null)
+            setShowSupplierDropdown(false)
+            setVehicleNo('')
+            setProcess('')
+            setDCType('SPM')
+            setDCDate('')
+            setNotes('')
+            setEnableWeight(true)
+            setEnableSqft(true)
+            setItems([])
+        }
+    }, [open])
 
     const removeItem = (id: number) => {
-        if (items.length > 1) {
-            setItems(items.filter((item) => item.id !== id))
-        }
+        setItems(items.filter((item) => item.id !== id))
     }
 
-    const updateItem = (id: number, field: keyof ItemRow, value: string) => {
-        setItems(items.map((item) => {
-            if (item.id === id) {
-                const updated = { ...item, [field]: value }
-
-                // Auto-calculate total weight
-                if (field === 'quantity' || field === 'weightPerUnit') {
-                    const qty = parseFloat(field === 'quantity' ? value : item.quantity) || 0
-                    const wpu = parseFloat(field === 'weightPerUnit' ? value : item.weightPerUnit) || 0
-                    updated.totalWeight = (qty * wpu).toFixed(2)
-                }
-
-                // Auto-calculate total sqft
-                if (field === 'quantity' || field === 'sqftPerUnit') {
-                    const qty = parseFloat(field === 'quantity' ? value : item.quantity) || 0
-                    const spu = parseFloat(field === 'sqftPerUnit' ? value : item.sqftPerUnit) || 0
-                    updated.totalSqft = (qty * spu).toFixed(2)
-                }
-
-                return updated
-            }
-            return item
-        }))
+    const handleItemsConfirm = (updatedItems: ItemRow[]) => {
+        // If items already exist, we're updating; otherwise adding
+        setItems(updatedItems)
     }
 
     // Supplier handlers
@@ -180,7 +124,12 @@ export function NewDCSheet() {
     const handleSupplierSearchChange = (value: string) => {
         setSupplierSearch(value)
         setSelectedSupplier(null)
-        setShowSupplierDropdown(value.length >= 2)
+        // Only open dropdown when starting to type, don't close it during typing
+        if (value.length >= 2 && !showSupplierDropdown) {
+            setShowSupplierDropdown(true)
+        } else if (value.length < 2) {
+            setShowSupplierDropdown(false)
+        }
     }
 
     const handleCreateNewSupplier = () => {
@@ -345,34 +294,29 @@ export function NewDCSheet() {
                                 </div>
 
                                 {selectedSupplier ? (
-                                    <div className="bg-[#1e293b]/50 p-6 rounded-xl border border-slate-800/60 relative group">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8">
+                                    <div className="bg-[#1e293b]/50 p-4 rounded-lg border border-slate-800/60">
+                                        <div className="grid grid-cols-3 gap-x-6 gap-y-3">
                                             <div>
-                                                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 block">Party Name</Label>
-                                                <div className="text-white font-medium text-lg">{selectedSupplier.partyName}</div>
+                                                <Label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Party Name</Label>
+                                                <div className="text-white font-medium text-sm mt-0.5">{selectedSupplier.partyName}</div>
                                             </div>
 
                                             <div>
-                                                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 block">GSTIN</Label>
-                                                <div className="text-slate-200 font-mono tracking-wide">{selectedSupplier.gstinNumber || '-'}</div>
+                                                <Label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">GSTIN</Label>
+                                                <div className="text-slate-200 font-mono text-xs mt-0.5">{selectedSupplier.gstinNumber || '-'}</div>
                                             </div>
 
                                             <div>
-                                                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 block">Contact</Label>
-                                                <div className="text-slate-300 text-sm space-y-0.5">
-                                                    {selectedSupplier.email && <div className="flex items-center gap-2">{selectedSupplier.email}</div>}
-                                                    {selectedSupplier.phone && <div className="flex items-center gap-2">{selectedSupplier.phone}</div>}
-                                                    {!selectedSupplier.email && !selectedSupplier.phone && <span className="text-slate-500">-</span>}
+                                                <Label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Contact</Label>
+                                                <div className="text-slate-300 text-xs mt-0.5">
+                                                    {selectedSupplier.email || selectedSupplier.phone || '-'}
                                                 </div>
                                             </div>
 
-                                            <div className="col-span-1 md:col-span-2 lg:col-span-3 pt-4 border-t border-slate-700/50 mt-2">
-                                                <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 block">Address</Label>
-                                                <div className="text-slate-300 text-sm leading-relaxed max-w-2xl">
-                                                    {selectedSupplier.addressLine1}
-                                                    {selectedSupplier.addressLine2 && <>, {selectedSupplier.addressLine2}</>}
-                                                    <br />
-                                                    {selectedSupplier.city}, {selectedSupplier.state} - {selectedSupplier.pinCode}
+                                            <div className="col-span-3">
+                                                <Label className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Address</Label>
+                                                <div className="text-slate-300 text-xs leading-snug mt-0.5">
+                                                    {selectedSupplier.addressLine1}{selectedSupplier.addressLine2 && `, ${selectedSupplier.addressLine2}`}, {selectedSupplier.city}, {selectedSupplier.state} - {selectedSupplier.pinCode}
                                                 </div>
                                             </div>
                                         </div>
@@ -388,33 +332,51 @@ export function NewDCSheet() {
                                                 className="bg-slate-900/50 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-brand"
                                             />
 
-                                            {/* Autocomplete Dropdown */}
+                                            {/* Autocomplete Dropdown with smooth transitions */}
                                             {showSupplierDropdown && (
-                                                <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                                <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl max-h-60 overflow-y-auto animate-in fade-in-0 slide-in-from-top-2 duration-200">
                                                     {searchError ? (
-                                                        <div className="p-3 text-sm text-red-400">
-                                                            Error: {(searchError as Error).message}
+                                                        <div className="p-4 text-sm text-red-400 bg-red-950/20 rounded-lg m-2">
+                                                            <span className="font-medium">Error:</span> {(searchError as Error).message}
                                                         </div>
                                                     ) : isSearching ? (
-                                                        <div className="p-3 text-sm text-slate-400">Searching...</div>
+                                                        <div className="p-3 space-y-2">
+                                                            {[1, 2, 3].map((i) => (
+                                                                <div key={i} className="animate-pulse">
+                                                                    <div className="h-4 bg-slate-800 rounded w-3/4 mb-2"></div>
+                                                                    <div className="h-3 bg-slate-800 rounded w-1/2"></div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     ) : searchResults.length > 0 ? (
-                                                        searchResults.map((supplier) => (
-                                                            <button
-                                                                key={supplier.id}
-                                                                onClick={() => handleSupplierSelect(supplier)}
-                                                                className="w-full text-left px-4 py-2 hover:bg-slate-800 border-b border-slate-800 last:border-b-0"
-                                                            >
-                                                                <p className="font-medium text-slate-200">{supplier.partyName}</p>
-                                                                <p className="text-xs text-slate-400">{supplier.city}, {supplier.state}</p>
-                                                            </button>
-                                                        ))
+                                                        <div className="py-1">
+                                                            {searchResults.map((supplier, index) => (
+                                                                <button
+                                                                    key={supplier.id}
+                                                                    onClick={() => handleSupplierSelect(supplier)}
+                                                                    className="w-full text-left px-4 py-3 hover:bg-slate-800/80 transition-colors duration-150 border-b border-slate-800/50 last:border-b-0 group"
+                                                                    style={{ animationDelay: `${index * 50}ms` }}
+                                                                >
+                                                                    <p className="font-medium text-slate-200 group-hover:text-white transition-colors text-sm">{supplier.partyName}</p>
+                                                                    <p className="text-xs text-slate-500 group-hover:text-slate-400 transition-colors mt-0.5">
+                                                                        {supplier.city}, {supplier.state}
+                                                                    </p>
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     ) : (
-                                                        <div className="p-4 text-center">
-                                                            <p className="text-sm text-slate-400 mb-2">No supplier found</p>
-                                                            <Button size="sm" onClick={handleCreateNewSupplier} className="bg-brand hover:bg-brand/90">
-                                                                <Plus className="w-3 h-3 mr-1" />
-                                                                Create New
-                                                            </Button>
+                                                        <div className="p-2">
+                                                            <div className="bg-slate-800/30 rounded-md p-2 text-center border border-slate-700/30">
+                                                                <p className="text-xs text-slate-400 mb-2">No supplier found</p>
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={handleCreateNewSupplier}
+                                                                    className="bg-brand hover:bg-brand/90 text-white h-7 text-xs w-full"
+                                                                >
+                                                                    <Plus className="w-3 h-3 mr-1" />
+                                                                    Create New
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
@@ -475,12 +437,12 @@ export function NewDCSheet() {
                                 </div>
                             </section>
 
-                            {/* Line Items Section - ORIGINAL TABLE DESIGN */}
+                            {/* Line Items Section - MODAL APPROACH */}
                             <section className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
                                         <Package className="h-5 w-5" />
-                                        Line Items
+                                        Line Items ({items.length})
                                     </h3>
                                     <div className="flex items-center gap-4 bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800">
                                         <div className="flex items-center gap-2">
@@ -505,178 +467,80 @@ export function NewDCSheet() {
                                     </div>
                                 </div>
 
-                                <div className="rounded-xl border border-slate-800 overflow-hidden bg-[#1e293b]/20">
-                                    <div className="overflow-x-auto custom-scrollbar">
-                                        <table className="w-full min-w-[800px] text-sm text-left">
-                                            <thead className="bg-slate-900/80 text-slate-400 font-medium uppercase text-xs tracking-wider">
-                                                <tr>
-                                                    <th className="px-4 py-3 w-12 text-center">#</th>
-                                                    <th className="px-3 py-3 w-40">Item Name</th>
-                                                    <th className="px-3 py-3 w-40">Description</th>
-                                                    <th className="px-3 py-3 w-32">Project</th>
-                                                    <th className="px-3 py-3 w-32">Proj Incharge</th>
-                                                    <th className="px-3 py-3 w-24">Qty</th>
-                                                    <th className="px-3 py-3 w-24">UOM</th>
-                                                    {enableWeight && (
-                                                        <>
-                                                            <th className="px-3 py-3 w-28">Wt/Unit</th>
-                                                            <th className="px-3 py-3 w-28">Total Wt</th>
-                                                        </>
-                                                    )}
-                                                    {enableSqft && (
-                                                        <>
-                                                            <th className="px-3 py-3 w-28">SqFt/Unit</th>
-                                                            <th className="px-3 py-3 w-28">Total  SqFt</th>
-                                                        </>
-                                                    )}
-                                                    <th className="px-3 py-3 w-28">Rate/Each</th>
-                                                    <th className="px-3 py-3 w-32">Remarks</th>
-                                                    <th className="px-3 py-3 w-32">Notes</th>
-                                                    <th className="px-3 py-3 w-16 text-center">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-800">
-                                                {items.map((item, index) => (
-                                                    <tr key={item.id} className="hover:bg-slate-800/30 transition-colors group">
-                                                        <td className="px-4 py-3 text-center text-slate-500">{index + 1}</td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.itemName}
-                                                                onChange={(e) => updateItem(item.id, "itemName", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="Item Name"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.description}
-                                                                onChange={(e) => updateItem(item.id, "description", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="Desc"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.projectName}
-                                                                onChange={(e) => updateItem(item.id, "projectName", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="Project"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.projectIncharge}
-                                                                onChange={(e) => updateItem(item.id, "projectIncharge", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="Incharge"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.quantity}
-                                                                onChange={(e) => updateItem(item.id, "quantity", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200 font-medium"
-                                                                placeholder="0"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.uom}
-                                                                onChange={(e) => updateItem(item.id, "uom", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="Nos"
-                                                            />
-                                                        </td>
-                                                        {enableWeight && (
-                                                            <>
-                                                                <td className="px-2 py-2">
-                                                                    <Input
-                                                                        value={item.weightPerUnit}
-                                                                        onChange={(e) => updateItem(item.id, "weightPerUnit", e.target.value)}
-                                                                        className="h-9 bg-teal-500/10 border-transparent hover:border-teal-500/50 focus:border-teal-500 text-teal-300 placeholder:text-teal-700/50"
-                                                                        placeholder="0.00"
-                                                                    />
-                                                                </td>
-                                                                <td className="px-2 py-2">
-                                                                    <Input
-                                                                        value={item.totalWeight}
-                                                                        readOnly
-                                                                        className="h-9 bg-teal-500/10 border-transparent text-teal-300 placeholder:text-teal-700/50 font-medium"
-                                                                        placeholder="0.00"
-                                                                    />
-                                                                </td>
-                                                            </>
-                                                        )}
-                                                        {enableSqft && (
-                                                            <>
-                                                                <td className="px-2 py-2">
-                                                                    <Input
-                                                                        value={item.sqftPerUnit}
-                                                                        onChange={(e) => updateItem(item.id, "sqftPerUnit", e.target.value)}
-                                                                        className="h-9 bg-blue-500/10 border-transparent hover:border-blue-500/50 focus:border-blue-500 text-blue-300 placeholder:text-blue-700/50"
-                                                                        placeholder="0.00"
-                                                                    />
-                                                                </td>
-                                                                <td className="px-2 py-2">
-                                                                    <Input
-                                                                        value={item.totalSqft}
-                                                                        readOnly
-                                                                        className="h-9 bg-blue-500/10 border-transparent text-blue-300 placeholder:text-blue-700/50 font-medium"
-                                                                        placeholder="0.00"
-                                                                    />
-                                                                </td>
-                                                            </>
-                                                        )}
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.rate}
-                                                                onChange={(e) => updateItem(item.id, "rate", e.target.value)}
-                                                                className="h-9 bg-amber-500/10 border-transparent hover:border-amber-500/50 focus:border-amber-500 text-amber-300 placeholder:text-amber-700/50"
-                                                                placeholder="0.00"
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.remarks}
-                                                                onChange={(e) => updateItem(item.id, "remarks", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="..."
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2">
-                                                            <Input
-                                                                value={item.notes}
-                                                                onChange={(e) => updateItem(item.id, "notes", e.target.value)}
-                                                                className="h-9 bg-transparent border-transparent hover:border-slate-700 focus:border-brand focus:bg-slate-900/50 text-slate-200"
-                                                                placeholder="..."
-                                                            />
-                                                        </td>
-                                                        <td className="px-2 py-2 text-center">
-                                                            <button
-                                                                onClick={() => removeItem(item.id)}
-                                                                className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-900/20 rounded-md transition-colors opacity-50 group-hover:opacity-100"
-                                                                disabled={items.length === 1}
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div className="p-3 bg-slate-900 border-t border-slate-800">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            onClick={addItem}
-                                            className="text-brand-highlight hover:text-white hover:bg-brand/20 gap-2 h-9"
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                            Add New Row
-                                        </Button>
-                                    </div>
+                                {/* Add Items Button */}
+                                <div className="rounded-xl border border-dashed border-slate-700 bg-slate-900/20 p-6">
+                                    <Button
+                                        type="button"
+                                        onClick={() => setShowAddItemsModal(true)}
+                                        className="w-full bg-brand hover:bg-brand/90 text-white h-12 text-base gap-2"
+                                    >
+                                        {items.length === 0 ? (
+                                            <>
+                                                <Plus className="h-5 w-5" />
+                                                Add Items
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Edit className="h-5 w-5" />
+                                                Update Items
+                                            </>
+                                        )}
+                                    </Button>
                                 </div>
+
+                                {/* Items Summary - Show only if items exist */}
+                                {items.length > 0 && (
+                                    <div className="rounded-xl border border-slate-800 overflow-hidden bg-[#1e293b]/20">
+                                        <div className="overflow-x-auto custom-scrollbar">
+                                            <table className="w-full text-sm text-left">
+                                                <thead className="bg-slate-900/80 text-slate-400 font-medium uppercase text-xs tracking-wider">
+                                                    <tr>
+                                                        <th className="px-4 py-3 w-12 text-center">#</th>
+                                                        <th className="px-3 py-3">Item Name</th>
+                                                        <th className="px-3 py-3">Description</th>
+                                                        <th className="px-3 py-3 text-right">Qty</th>
+                                                        <th className="px-3 py-3">UOM</th>
+                                                        {enableWeight && <th className="px-3 py-3 text-right">Total Wt</th>}
+                                                        {enableSqft && <th className="px-3 py-3 text-right">Total SqFt</th>}
+                                                        <th className="px-3 py-3 text-right">Rate</th>
+                                                        <th className="px-3 py-3 text-center w-16">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-800">
+                                                    {items.map((item, index) => (
+                                                        <tr key={item.id} className="hover:bg-slate-800/30 transition-colors group">
+                                                            <td className="px-4 py-3 text-center text-slate-500">{index + 1}</td>
+                                                            <td className="px-3 py-3 text-slate-200 font-medium">{item.itemName}</td>
+                                                            <td className="px-3 py-3 text-slate-400 max-w-[200px] truncate" title={item.description}>
+                                                                {item.description || '-'}
+                                                            </td>
+                                                            <td className="px-3 py-3 text-right text-slate-200 font-medium">{item.quantity}</td>
+                                                            <td className="px-3 py-3 text-slate-300">{item.uom}</td>
+                                                            {enableWeight && (
+                                                                <td className="px-3 py-3 text-right text-teal-300 font-medium">{item.totalWeight}</td>
+                                                            )}
+                                                            {enableSqft && (
+                                                                <td className="px-3 py-3 text-right text-blue-300 font-medium">{item.totalSqft}</td>
+                                                            )}
+                                                            <td className="px-3 py-3 text-right text-amber-300 font-medium">
+                                                                {item.rate ? `₹${item.rate}` : '-'}
+                                                            </td>
+                                                            <td className="px-3 py-3 text-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeItem(item.id)}
+                                                                    className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-900/20 rounded-md transition-colors opacity-50 group-hover:opacity-100"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
                             </section>
 
                             {/* Additional Info Section - ORIGINAL DESIGN */}
@@ -730,262 +594,17 @@ export function NewDCSheet() {
                     setShowCreateSupplier(false)
                 }}
             />
+
+            {/* Add/Update Items Modal */}
+            <AddItemsModal
+                open={showAddItemsModal}
+                onOpenChange={setShowAddItemsModal}
+                onConfirm={handleItemsConfirm}
+                enableWeight={enableWeight}
+                enableSqft={enableSqft}
+                mode={items.length > 0 ? "update" : "add"}
+                initialItems={items}
+            />
         </>
-    )
-}
-
-// Create Supplier Modal Component
-interface CreateSupplierModalProps {
-    open: boolean
-    onOpenChange: (open: boolean) => void
-    supplierName: string
-    onSupplierCreated: (supplier: Supplier) => void
-}
-
-function CreateSupplierModal({ open, onOpenChange, supplierName, onSupplierCreated }: CreateSupplierModalProps) {
-    const createSupplier = useCreateSupplier()
-
-    const [formData, setFormData] = useState<Partial<CreateSupplierData>>({
-        partyName: '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        stateCode: 33,
-        pinCode: undefined,
-        gstinNumber: '',
-        email: '',
-        phone: ''
-    })
-    const [stateId, setStateId] = useState(0);
-
-    // Reset form when modal opens/closes
-    useEffect(() => {
-        if (open) {
-            // Reset to fresh state when opening
-            setFormData({
-                partyName: supplierName,
-                addressLine1: '',
-                addressLine2: '',
-                city: '',
-                state: '',
-                stateCode: 33,
-                pinCode: undefined,
-                gstinNumber: '',
-                email: '',
-                phone: ''
-            })
-            setStateId(0) // Reset state selector
-        }
-    }, [open, supplierName])
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
-        try {
-            const newSupplier = await createSupplier.mutateAsync(formData as CreateSupplierData)
-            onSupplierCreated(newSupplier as Supplier)
-            toast.success('Supplier created successfully!')
-            // Close modal and reset
-            onOpenChange(false)
-        } catch (error) {
-            // Error handled by hook
-        }
-    }
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#0F172A] border-slate-700 text-slate-100">
-                <DialogHeader>
-                    <DialogTitle className="text-slate-100">Create New Supplier</DialogTitle>
-                </DialogHeader>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <Label className="text-slate-300">Party Name *</Label>
-                        <Input
-                            value={formData.partyName || ''}
-                            onChange={(e) => setFormData({ ...formData, partyName: e.target.value })}
-                            required
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div>
-                        <Label className="text-slate-300">Address Line 1 *</Label>
-                        <Input
-                            value={formData.addressLine1 || ''}
-                            onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
-                            required
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div>
-                        <Label className="text-slate-300">Address Line 2</Label>
-                        <Input
-                            value={formData.addressLine2 || ''}
-                            onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 z-50">
-                        <style>{`
-                            .stdropdown-container {
-                                border: 1px solid #334155 !important;
-                                background-color: rgba(15, 23, 42, 0.5) !important;
-                                border-radius: 0.375rem !important;
-                            }
-                            /* Remove default inner borders/outlines */
-                            .stdropdown-container *:not(.stdropdown-menu):not(.stdropdown-item) {
-                                border: none !important;
-                                outline: none !important;
-                                box-shadow: none !important;
-                            }
-                            .stdropdown-input {
-                                background-color: transparent !important;
-                                color: #f1f5f9 !important;
-                            }
-                            .stdropdown-input::placeholder {
-                                color: #94a3b8 !important;
-                            }
-                            .stdropdown-menu {
-                                background-color: #0f172a !important;
-                                border: 1px solid #334155 !important;
-                                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
-                                z-index: 9999 !important;
-                            }
-                            .stdropdown-item {
-                                background-color: #0f172a !important;
-                                color: #cbd5e1 !important;
-                            }
-                            .stdropdown-item:hover {
-                                background-color: #1e293b !important;
-                                color: #f8fafc !important;
-                            }
-                            .stdropdown-tool {
-                                display: none !important;
-                            }
-                        `}</style>
-                        <div className="flex flex-col space-y-2">
-                            <Label className="text-slate-300">State *</Label>
-                            <div>
-                                <StateSelect
-                                    key={`state-${open}`}
-                                    countryid={101}
-                                    onChange={(e: any) => {
-                                        setStateId(e.id);
-                                        const stateName = e.name;
-                                        setFormData({
-                                            ...formData,
-                                            state: stateName,
-                                            stateCode: GST_STATE_CODES[stateName] || 33 // Default or 0
-                                        });
-                                    }}
-                                    placeHolder="Select State"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col space-y-2">
-                            <Label className="text-slate-300">City *</Label>
-                            <div>
-                                <CitySelect
-                                    key={`city-${open}-${stateId}`}
-                                    countryid={101}
-                                    stateid={stateId}
-                                    onChange={(e: any) => {
-                                        setFormData({ ...formData, city: e.name });
-                                    }}
-                                    placeHolder="Select City"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label className="text-slate-300">State Code (Auto-filled)</Label>
-                            <Input
-                                type="number"
-                                value={formData.stateCode || 33}
-                                readOnly
-                                className="bg-slate-800 border-slate-700 text-slate-400"
-                            />
-                            <p className="text-xs text-slate-500 mt-1">Automatically set</p>
-                        </div>
-
-                        <div>
-                            <Label className="text-slate-300">Pin Code *</Label>
-                            <Input
-                                type="number"
-                                value={formData.pinCode || ''}
-                                onChange={(e) => setFormData({ ...formData, pinCode: parseInt(e.target.value) })}
-                                required
-                                className="bg-slate-900/50 border-slate-700 text-slate-100"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <Label className="text-slate-300">GSTIN Number *</Label>
-                        <Input
-                            value={formData.gstinNumber || ''}
-                            onChange={(e) => setFormData({ ...formData, gstinNumber: e.target.value })}
-                            placeholder="22AAAAA0000A1Z5"
-                            required
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div>
-                        <Label className="text-slate-300">Email *</Label>
-                        <Input
-                            type="email"
-                            value={formData.email || ''}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            placeholder="supplier@example.com"
-                            required
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div>
-                        <Label className="text-slate-300">Phone *</Label>
-                        <Input
-                            type="tel"
-                            value={formData.phone || ''}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            placeholder="9876543210"
-                            required
-                            className="bg-slate-900/50 border-slate-700 text-slate-100"
-                        />
-                    </div>
-
-                    <div className="flex justify-end space-x-3 pt-4">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => onOpenChange(false)}
-                            className="bg-slate-700 text-slate-200 hover:bg-slate-600"
-                        >
-                            Cancel
-                        </Button>
-
-                        <Button type="submit" disabled={createSupplier.isPending} className="bg-blue-600 hover:bg-blue-700 text-white">
-                            {createSupplier.isPending ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Creating...
-                                </>
-                            ) : (
-                                'Create Supplier'
-                            )}
-                        </Button>
-                    </div>
-                </form>
-            </DialogContent>
-        </Dialog>
     )
 }

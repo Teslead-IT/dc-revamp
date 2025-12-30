@@ -44,7 +44,9 @@ export function useSuppliers(options?: Partial<UseQueryOptions<Supplier[]>>) {
         queryFn: async () => {
             const res = await externalApi.getSuppliers()
             if (!res.success) throw new Error(res.message || 'Failed to fetch suppliers')
-            return res.data as Supplier[]
+            // API returns { data: { suppliers: [...] } }
+            const data = res.data as any
+            return (data.suppliers || []) as Supplier[]
         },
         // Keep supplier list fresh for 3 minutes
         staleTime: 3 * 60 * 1000,

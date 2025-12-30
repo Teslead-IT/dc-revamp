@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronUp, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useSearchDraftDCItems } from "@/hooks/use-draft-dc-items"
 
 interface ItemRow {
     id: number
@@ -63,6 +64,45 @@ export function AddItemsModal({
         notes: "",
     }])
     const [expandedItemId, setExpandedItemId] = useState<number>(1)
+
+    // Autosuggestion state
+    const [itemNameSearch, setItemNameSearch] = useState<Record<number, string>>({})
+    const [showSuggestions, setShowSuggestions] = useState<Record<number, boolean>>({})
+    const [debouncedSearch, setDebouncedSearch] = useState<string>('')
+    const [activeSuggestionItemId, setActiveSuggestionItemId] = useState<number | null>(null)
+    const suggestionRefs = useRef<Record<number, HTMLDivElement | null>>({})
+
+    // Debounce search term
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            if (activeSuggestionItemId) {
+                const searchTerm = itemNameSearch[activeSuggestionItemId] || ''
+                setDebouncedSearch(searchTerm)
+            }
+        }, 300) // 300ms debounce
+
+        return () => clearTimeout(handler)
+    }, [itemNameSearch, activeSuggestionItemId])
+
+    // Fetch suggestions
+    const { data: suggestions, isLoading: suggestionsLoading } = useSearchDraftDCItems(
+        debouncedSearch,
+        !!activeSuggestionItemId && !!debouncedSearch
+    )
+
+    // Close suggestions when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            Object.entries(suggestionRefs.current).forEach(([itemId, ref]) => {
+                if (ref && !ref.contains(event.target as Node)) {
+                    setShowSuggestions(prev => ({ ...prev, [itemId]: false }))
+                }
+            })
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
 
     // Reset items when modal opens
     useEffect(() => {
@@ -137,6 +177,31 @@ export function AddItemsModal({
         }))
     }
 
+    // Handle item name input with autosuggestion
+    const handleItemNameChange = (id: number, value: string) => {
+        // Update the item value
+        handleChange(id, 'itemName', value)
+
+        // Update search state
+        setItemNameSearch(prev => ({ ...prev, [id]: value }))
+        setActiveSuggestionItemId(id)
+
+        // Show/hide suggestions based on input length
+        if (value.length >= 2) {
+            setShowSuggestions(prev => ({ ...prev, [id]: true }))
+        } else {
+            setShowSuggestions(prev => ({ ...prev, [id]: false }))
+        }
+    }
+
+    // Handle suggestion selection
+    const handleSuggestionSelect = (id: number, itemName: string) => {
+        handleChange(id, 'itemName', itemName)
+        setItemNameSearch(prev => ({ ...prev, [id]: itemName }))
+        setShowSuggestions(prev => ({ ...prev, [id]: false }))
+        setActiveSuggestionItemId(null)
+    }
+
     const toggleExpand = (id: number) => {
         setExpandedItemId(expandedItemId === id ? 0 : id)
     }
@@ -172,7 +237,24 @@ export function AddItemsModal({
         return isBasicValid && isWeightValid && isSqftValid
     }
 
+    // Check for duplicate item names
+    const hasDuplicateItems = () => {
+        const itemNames = items.map(item => item.itemName.trim().toLowerCase()).filter(name => name !== '')
+        const uniqueNames = new Set(itemNames)
+        return itemNames.length !== uniqueNames.size
+    }
+
     const handleConfirm = () => {
+        // Check for duplicates first
+        if (hasDuplicateItems()) {
+            toast({
+                variant: "destructive",
+                title: "Duplicate Items Found",
+                description: "Please ensure all item names are unique. Remove or rename duplicate items.",
+            })
+            return
+        }
+
         // Validate all items
         for (let i = 0; i < items.length; i++) {
             const item = items[i]
@@ -213,7 +295,7 @@ export function AddItemsModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#0F172A] border-slate-700 text-slate-100 w-[80vw] max-w-[80vw] h-[90vh] flex flex-col p-0 shadow-2xl shadow-black/50 gap-0 sm:max-w-[80vw] [&>button]:text-white [&>button]:bg-slate-800/50 [&>button]:hover:bg-slate-700 [&>button]:z-50 [&>button]:h-8 [&>button]:w-8 [&>button]:rounded-full [&>button]:top-4 [&>button]:right-4">
+            <DialogContent className="bg-[#0F172A] border-slate-700 text-slate-100 w-[80vw] max-w-[80vw] h-[90vh] flex flex-col p-0 shadow-2xl shadow-black/50 gap-0 sm:max-w-[80vw] [&>button]:text-white [&>button]:bg-slate-800/50 [&>button]:hover:bg-slate-700 [&>button]:z-50 [&>button]:h-8 [&>button]:w-8 [&>button]:rounded-full [&>button]:top-4 [&>button]:right-4" onInteractOutside={(e) => e.preventDefault()}>
                 <DialogHeader className="p-6 pb-4 border-b border-slate-800 shrink-0">
                     <DialogTitle className="text-2xl text-white font-bold ml-1">
                         {mode === 'update' ? 'Update Items' : 'Add Items'}
@@ -285,13 +367,65 @@ export function AddItemsModal({
                                             <div className="grid grid-cols-1 md:grid-cols-12 gap-5 pt-2">
                                                 {/* Row 1: Basic Info */}
                                                 <div className="md:col-span-6 space-y-2">
-                                                    <Label className="text-slate-300 text-xs font-medium uppercase tracking-wider">Item Name <span className="text-red-400">*</span></Label>
-                                                    <Input
-                                                        value={item.itemName}
-                                                        onChange={(e) => handleChange(item.id, 'itemName', e.target.value)}
-                                                        className="bg-slate-950/50 border-slate-700 text-white focus:ring-1 focus:ring-brand focus:border-brand h-10 transition-colors"
-                                                        placeholder="e.g. Steel Pipe 20mm"
-                                                    />
+                                                    <Label className="text-slate-300 text-xs font-medium uppercase tracking-wider">
+                                                        Item Name <span className="text-red-400">*</span>
+                                                        {(() => {
+                                                            const isDuplicate = items.filter(i => i.itemName.trim().toLowerCase() === item.itemName.trim().toLowerCase() && item.itemName.trim() !== '').length > 1
+                                                            return isDuplicate && (
+                                                                <span className="ml-2 text-xs text-red-400 font-normal normal-case">(Duplicate)</span>
+                                                            )
+                                                        })()}
+                                                    </Label>
+                                                    <div className="relative" ref={(el) => { suggestionRefs.current[item.id] = el }}>
+                                                        <Input
+                                                            value={item.itemName}
+                                                            onChange={(e) => handleItemNameChange(item.id, e.target.value)}
+                                                            onFocus={() => {
+                                                                if (item.itemName.length >= 2) {
+                                                                    setShowSuggestions(prev => ({ ...prev, [item.id]: true }))
+                                                                    setActiveSuggestionItemId(item.id)
+                                                                }
+                                                            }}
+                                                            className={`bg-slate-950/50 border-slate-700 text-white focus:ring-1 h-10 transition-colors ${items.filter(i => i.itemName.trim().toLowerCase() === item.itemName.trim().toLowerCase() && item.itemName.trim() !== '').length > 1
+                                                                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                                                    : 'focus:ring-brand focus:border-brand'
+                                                                }`}
+                                                            placeholder="e.g. Steel Pipe 20mm"
+                                                            autoComplete="off"
+                                                        />
+
+                                                        {/* Autosuggestion Dropdown */}
+                                                        {showSuggestions[item.id] && (suggestionsLoading || (suggestions && suggestions.length > 0)) && (
+                                                            <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-slate-700 rounded-lg shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200">
+                                                                {suggestionsLoading && activeSuggestionItemId === item.id ? (
+                                                                    <div className="flex items-center justify-center py-6">
+                                                                        <Loader2 className="h-5 w-5 animate-spin text-brand" />
+                                                                        <span className="ml-2 text-sm text-slate-300">Searching...</span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="max-h-60 overflow-y-auto py-1">
+                                                                        {suggestions?.map((suggestion: any, idx: number) => (
+                                                                            <button
+                                                                                key={suggestion.id || idx}
+                                                                                type="button"
+                                                                                onClick={() => handleSuggestionSelect(item.id, suggestion.itemName)}
+                                                                                className="w-full px-4 py-3 text-left hover:bg-slate-800/80 transition-colors duration-150 border-b border-slate-800/50 last:border-b-0 group"
+                                                                            >
+                                                                                <div className="font-medium text-slate-200 group-hover:text-white transition-colors text-sm truncate">
+                                                                                    {suggestion.itemName}
+                                                                                </div>
+                                                                                {suggestion.itemDescription && (
+                                                                                    <div className="text-xs text-slate-500 group-hover:text-slate-400 transition-colors mt-0.5 truncate">
+                                                                                        {suggestion.itemDescription}
+                                                                                    </div>
+                                                                                )}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 <div className="md:col-span-3 space-y-2">
@@ -470,7 +604,8 @@ export function AddItemsModal({
                         <Button
                             type="button"
                             onClick={handleConfirm}
-                            className="bg-brand hover:bg-brand/90 text-white"
+                            disabled={hasDuplicateItems()}
+                            className="bg-brand hover:bg-brand/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {mode === 'update' ? 'Save Changes' : 'Add Items'}
                         </Button>

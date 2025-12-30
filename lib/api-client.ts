@@ -478,8 +478,12 @@ class ExternalApiClient {
     /**
      * Get all draft DC items
      */
-    async getDraftDCItems() {
-        return this.get('/api/draft-dc-items');
+    async getDraftDCItems(searchTerm?: string, page: number = 1, limit: number = 20) {
+        let query = `/api/draft-dc-items?page=${page}&limit=${limit}`;
+        if (searchTerm) {
+            query += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+        }
+        return this.get(query);
     }
 
     /**

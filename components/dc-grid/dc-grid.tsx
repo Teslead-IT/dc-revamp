@@ -470,8 +470,8 @@ export default function DCGrid() {
                 onColumnsChange={handleColumnConfigsChange}
             />
 
-            <div className="flex-1 relative overflow-hidden">
-                <div className="ag-theme-balham-dark h-full w-full custom-ag-grid">
+            <div className="flex-1 relative">
+                <div className="ag-theme-balham-dark absolute inset-0 custom-ag-grid">
                     <AgGridReact
                         theme="legacy" // Fix error #239
                         ref={gridRef}
@@ -532,43 +532,20 @@ export default function DCGrid() {
             {/* Injected Styles for AG Grid Customization */}
             <style jsx global>{`
                 .ag-theme-balham-dark {
-                    /* Variable overrides for dark theme - COMPACT ZOHO STYLE */
-                    --ag-background-color: #0F172A; /* Darker background */
+                    /* Variable overrides for dark theme */
+                    --ag-background-color: #0B1120;
                     --ag-foreground-color: #94a3b8;
-                    --ag-border-color: #1e293b;
+                    --ag-border-color: #334155;
                     --ag-header-background-color: #0F172A;
-                    --ag-header-height: 32px;  /* REDUCED from 48px */
-                    --ag-row-height: 34px;      /* REDUCED from 48px */
-                    --ag-font-size: 11px;       /* REDUCED from 12px */
-                    --ag-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    --ag-header-height: 32px;
+                    --ag-row-height: 34px;
+                    --ag-font-size: 11px;
                     --ag-row-hover-color: #1e293b;
                     --ag-selected-row-background-color: rgba(16, 185, 129, 0.08);
-                    --ag-odd-row-background-color: #131b2e; /* Subtle Zebra Stripe */
-                    --ag-header-column-separator-display: none; /* Cleaner look without separators */
-                    
-                    /* Show action icon on hover */
-                    .ag-row:hover .actions-icon, .ag-row-selected .actions-icon {
-                        opacity: 1 !important;
-                    }
-                    /* Ensure the actions button inside doesn't have a background to block the view */
-                    .actions-icon:hover {
-                         background-color: transparent !important;
-                    }
-                    
-                    /* Typography */
-                    --ag-font-family: inherit;
-                    --ag-font-size: 13px;
+                    --ag-odd-row-background-color: #131b2e;
+                    --ag-header-column-separator-display: none;
                 }
-                /* Ensures popups/menus attached to body also get the theme */
-                :global(.ag-theme-balham-dark) {
-                     --ag-background-color: #0F172A;
-                     --ag-foreground-color: #cbd5e1;
-                     --ag-border-color: #1e293b;
-                }
-                .custom-ag-grid {
-                    height: 100%;
-                    width: 100%;
-                }
+                
                 .ag-header-cell-custom {
                     font-size: 0.70rem;
                     font-weight: 700;
@@ -578,7 +555,7 @@ export default function DCGrid() {
                 }
                 .ag-header-cell-custom:hover {
                     cursor: move; 
-                    color: #e2e8f0; /* Highlight header on hover */
+                    color: #e2e8f0;
                 }
                 .ag-cell-custom {
                     display: flex;
@@ -603,27 +580,8 @@ export default function DCGrid() {
                 /* 1. Hide Actions Header & Cell Background/Borders (Blend with Page BG) */
                 .ag-header-cell[col-id="actions"], 
                 .ag-cell[col-id="actions"] {
-                                    background-color: #0B1120 !important; /* Page Background */
-
+                    background-color: #0B1120 !important; /* Page Background */
                     border: none !important;
-                }
-                
-                /* 2. Start the "Table" visual at DC Number */
-                .ag-header-cell[col-id="dcNumber"], 
-                .ag-cell[col-id="dcNumber"] {
-                    border-left: 1px solid #334155 !important;
-                }
-                
-                /* 3. Add Top/Bottom Borders to the "Table" part (Header) */
-                .ag-header {
-                    border-bottom: none !important; /* Remove global header border */
-                    background-color: #0F172A;
-                }
-                
-                /* Add top/bottom border to all header cells EXCEPT actions */
-                .ag-header-cell:not([col-id="actions"]) {
-                    border-top: 1px solid #334155 !important;
-                    border-bottom: 1px solid #1e293b !important;
                 }
 
                 /* Sticky column refined styles */

@@ -77,7 +77,7 @@ export function CreateSupplierModal({ open, onOpenChange, supplierName = '', onS
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#0F172A] border-slate-700 text-slate-100 max-h-[90vh] overflow-y-auto">
+            <DialogContent className="bg-[#0F172A] border-slate-700 text-slate-100 max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle className="text-slate-100">Create New Supplier</DialogTitle>
                 </DialogHeader>

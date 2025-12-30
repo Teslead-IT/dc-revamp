@@ -88,19 +88,21 @@ export default function DraftDCViewPage() {
             })
 
             // Set supplier from draft
-            const partyDetails = draft.partyDetails || draft
+            // Set supplier from draft - Prioritize supplierSnapshot
+            const source = draft.supplierSnapshot || draft.partyDetails || draft
+
             setSelectedSupplier({
-                partyId: draft.partyId,
-                partyName: partyDetails.partyName || '',
-                addressLine1: partyDetails.partyAddressLine1 || partyDetails.addressLine1 || '',
-                addressLine2: partyDetails.partyAddressLine2 || partyDetails.addressLine2 || '',
-                state: partyDetails.partyState || partyDetails.state || '',
-                city: partyDetails.partyCity || partyDetails.city || '',
-                pinCode: partyDetails.partyPinCode || partyDetails.pinCode || '',
-                stateCode: partyDetails.partyStateCode || partyDetails.stateCode || 33,
-                gstinNumber: partyDetails.partyGstinNumber || partyDetails.gstinNumber || '',
-                email: partyDetails.partyEmail || partyDetails.email || '',
-                phone: partyDetails.partyPhone || partyDetails.phone || ''
+                partyId: source.partyId || draft.partyId,
+                partyName: source.partyName || '',
+                addressLine1: source.addressLine1 || source.partyAddressLine1 || '',
+                addressLine2: source.addressLine2 || source.partyAddressLine2 || '',
+                city: source.city || source.partyCity || '',
+                state: source.state || source.partyState || '',
+                stateCode: source.stateCode || source.partyStateCode || 33,
+                pinCode: source.pinCode || source.partyPinCode || '',
+                gstinNumber: source.gstinNumber || source.partyGstinNumber || '',
+                email: source.email || source.partyEmail || '',
+                phone: source.phone || source.partyPhone || ''
             } as Supplier)
 
             // Convert draft items to ItemRow format

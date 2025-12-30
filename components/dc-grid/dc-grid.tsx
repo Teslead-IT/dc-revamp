@@ -213,7 +213,10 @@ export default function DCGrid() {
                 {
                     field: "partyDetails.partyName",
                     headerName: "Party Name",
-                    valueGetter: (params) => params.data?.partyDetails?.partyName || 'N/A',
+                    valueGetter: (params) => {
+                        const data = params.data
+                        return data?.supplierSnapshot?.partyName || data?.partyDetails?.partyName || 'N/A'
+                    },
                     width: 180
                 },
                 {

@@ -13,14 +13,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 
-interface DCDeleteDialogProps {
+interface SupplierDeleteDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onConfirm: () => Promise<void> | void;
-    itemName?: string;
+    supplierName?: string;
+    supplierId?: string;
 }
 
-export function DCDeleteDialog({ open, onOpenChange, onConfirm, itemName }: DCDeleteDialogProps) {
+export function SupplierDeleteDialog({ open, onOpenChange, onConfirm, supplierName, supplierId }: SupplierDeleteDialogProps) {
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
     const [errorMessage, setErrorMessage] = useState('')
 
@@ -37,7 +38,7 @@ export function DCDeleteDialog({ open, onOpenChange, onConfirm, itemName }: DCDe
             }, 1500)
         } catch (error: any) {
             setStatus('error')
-            setErrorMessage(error?.message || 'Failed to delete item')
+            setErrorMessage(error?.message || 'Failed to delete supplier')
         }
     }
 
@@ -61,22 +62,27 @@ export function DCDeleteDialog({ open, onOpenChange, onConfirm, itemName }: DCDe
                         {/* Header with Ribbon */}
                         <div className="relative pt-8 px-6 pb-2">
                             {/* Ribbon Tag */}
-                            <div className="absolute top-0 left-8 bg-emerald-600 text-white text-sm font-medium px-4 py-1.5 rounded-b-md shadow-lg z-10">
-                                Trash Delivery Challan?
+                            <div className="absolute top-0 left-8 bg-red-600 text-white text-sm font-medium px-4 py-1.5 rounded-b-md shadow-lg z-10">
+                                Delete Supplier?
                             </div>
 
                             {/* Folded ribbon effect */}
-                            <div className="absolute top-0 left-[calc(2rem-4px)] w-2 h-2 bg-emerald-800 skew-x-[-45deg] z-0"></div>
+                            <div className="absolute top-0 left-[calc(2rem-4px)] w-2 h-2 bg-red-800 skew-x-[-45deg] z-0"></div>
 
                             <AlertDialogHeader className="mt-4">
-                                <AlertDialogTitle className="sr-only">Trash Delivery Challan</AlertDialogTitle>
+                                <AlertDialogTitle className="sr-only">Delete Supplier</AlertDialogTitle>
                                 <AlertDialogDescription className="text-slate-300 text-sm leading-relaxed mt-2">
-                                    This action will remove all its associated modules. You can restore trashed delivery challan(s) from the Recycle Bin within 60 days.
-                                    {itemName && (
-                                        <span className="block mt-2 text-white font-medium">
-                                            Item: {itemName}
+                                    Are you sure you want to delete this supplier? This action will permanently remove the supplier and all associated data from the system.
+                                    {supplierName && supplierId && (
+                                        <span className="block mt-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+                                            <span className="block text-xs text-slate-500 mb-1">Supplier Details</span>
+                                            <span className="block text-white font-semibold">{supplierName}</span>
+                                            <span className="block text-xs text-slate-400 mt-1">ID: {supplierId}</span>
                                         </span>
                                     )}
+                                    <span className="block mt-3 text-xs text-red-400 font-medium">
+                                        ⚠️ Warning: This action cannot be undone.
+                                    </span>
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                         </div>
@@ -88,9 +94,9 @@ export function DCDeleteDialog({ open, onOpenChange, onConfirm, itemName }: DCDe
                                     e.preventDefault();
                                     handleConfirm();
                                 }}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white border-0"
+                                className="bg-red-600 hover:bg-red-700 text-white border-0"
                             >
-                                Trash
+                                Delete Permanently
                             </AlertDialogAction>
                             <AlertDialogCancel className="bg-transparent border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white mt-0">
                                 Cancel
@@ -102,8 +108,8 @@ export function DCDeleteDialog({ open, onOpenChange, onConfirm, itemName }: DCDe
                 {status === 'loading' && (
                     <div className="p-12 flex flex-col items-center justify-center">
                         <AlertDialogTitle className="sr-only">Deleting</AlertDialogTitle>
-                        <Loader2 className="h-12 w-12 text-emerald-500 animate-spin mb-4" />
-                        <p className="text-slate-300 text-sm">Deleting...</p>
+                        <Loader2 className="h-12 w-12 text-red-500 animate-spin mb-4" />
+                        <p className="text-slate-300 text-sm">Deleting supplier...</p>
                     </div>
                 )}
 
@@ -115,7 +121,7 @@ export function DCDeleteDialog({ open, onOpenChange, onConfirm, itemName }: DCDe
                         </div>
                         <h3 className="text-white font-semibold text-lg mb-2">Success!</h3>
                         <p className="text-slate-300 text-sm text-center">
-                            Delivery Challan moved to recycle bin.
+                            Supplier deleted successfully.
                         </p>
                     </div>
                 )}

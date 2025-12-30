@@ -256,7 +256,7 @@ export function NewDCSheet() {
                         New DC
                     </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-full max-w-[95vw] sm:max-w-[50vw] bg-[#0F172A] border-l border-slate-800 p-0 shadow-2xl flex flex-col">
+                <SheetContent side="right" className="w-full max-w-[95vw] sm:max-w-[50vw] bg-[#0F172A] border-l border-slate-800 p-0 shadow-2xl flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
                     <SheetHeader className="px-6 py-4 border-b border-slate-800 bg-[#0F172A] flex-shrink-0">
                         <div className="flex items-center justify-between">
                             <div>

@@ -61,6 +61,37 @@ export function useDraftDCItems(options?: Partial<UseQueryOptions<DraftDCItemsRe
     })
 }
 
+/**
+ * Hook to search draft DC items by name
+ * 
+ * Features:
+ * - Real-time search with pagination
+ * - Automatically fetches matching items based on search term
+ * - Used for autocomplete/suggestion features
+ * 
+ * @param searchTerm - Search query for item names
+ * @param enabled - Whether the query should run (default: true)
+ * 
+ * @example
+ * ```tsx
+ * const { data: suggestions, isLoading } = useSearchDraftDCItems('valve', true)
+ * ```
+ */
+export function useSearchDraftDCItems(searchTerm?: string, enabled: boolean = true) {
+    return useQuery({
+        queryKey: [...draftDCItemsKeys.lists(), 'search', searchTerm],
+        queryFn: async () => {
+            const res = await externalApi.getDraftDCItems(searchTerm, 1, 10)
+            if (!res.success) throw new Error(res.message || 'Failed to search draft DC items')
+            return res.data as DraftDCItemsResponse[]
+        },
+        // Only run query if search term exists and is enabled
+        enabled: enabled && !!searchTerm && searchTerm.length >= 2,
+        // Keep results cached for 1 minute
+        staleTime: 60 * 1000,
+    })
+}
+
 // ============= Mutation Hooks =============
 
 /**

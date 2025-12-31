@@ -188,21 +188,6 @@ export default function DCGrid() {
         if (activeView === 'Draft') {
             return [
                 {
-                    field: "actions",
-                    headerName: "",
-                    cellRenderer: ActionsCellRenderer,
-                    pinned: "left",
-                    lockPinned: true,
-                    width: 50,
-                    cellClass: "flex items-center justify-center p-0",
-                    suppressHeaderMenuButton: true,
-                    suppressMovable: true,
-                    lockPosition: "left",
-                    resizable: false,
-                    sortable: false,
-                    filter: false
-                },
-                {
                     field: "draftId",
                     headerName: "Draft ID",
                     pinned: "left",
@@ -286,21 +271,6 @@ export default function DCGrid() {
 
         // Regular DC Columns
         return [
-            {
-                field: "actions",
-                headerName: "",
-                cellRenderer: ActionsCellRenderer,
-                pinned: "left",
-                lockPinned: true,
-                width: 50,
-                cellClass: "flex items-center justify-center p-0 ",
-                suppressHeaderMenuButton: true,
-                suppressMovable: true,
-                lockPosition: "left",
-                resizable: false,
-                sortable: false,
-                filter: false
-            },
             {
                 field: "dcNumber",
                 headerName: "DC Number",
@@ -570,21 +540,10 @@ export default function DCGrid() {
                      border: none !important;
                 }
                 
-                /* --- CUTOUT ACTIONS COLUMN STYLES --- */
-                
                 /* --- GLOBAL BORDER REMOVAL FOR "CLEAN" LOOK --- */
                 .ag-row, .ag-cell, .ag-cell-value, .ag-row-even, .ag-row-odd {
                     border: none !important;
                     border-bottom: none !important;
-                }
-
-                /* --- CUTOUT ACTIONS COLUMN STYLES --- */
-                
-                /* 1. Hide Actions Header & Cell Background/Borders (Blend with Page BG) */
-                .ag-header-cell[col-id="actions"], 
-                .ag-cell[col-id="actions"] {
-                    background-color: #0B1120 !important; /* Page Background */
-                    border: none !important;
                 }
 
                 /* Sticky column refined styles */

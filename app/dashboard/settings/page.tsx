@@ -18,6 +18,7 @@ const ART_OPTIONS = [
   { id: 'art-3', src: '/line-arts/art-3.png', label: 'Art 3' },
   { id: 'art-4', src: '/line-arts/art-4.png', label: 'Art 4' },
   { id: 'art-5', src: '/line-arts/art-5.png', label: 'Art 5' },
+  { id: 'art-6', src: '/line-arts/art-6.png', label: 'Art 6' },
 ]
 
 export default function SettingsPage() {

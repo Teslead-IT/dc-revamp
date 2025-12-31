@@ -45,7 +45,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
           console.error("Error during redirect:", err)
           router.push("/dashboard")
         }
-      }, 2000)
+      }, 1000)
       return () => clearTimeout(timer)
     }
   }, [step, onLoginSuccess, router, queryClient])
@@ -244,7 +244,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </div>
 
             <div className="mx-auto mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-gray-700">
-              <div className="h-full animate-[loading_2s_ease-in-out] bg-indigo-600" />
+              <div className="h-full animate-[loading_1s_ease-in-out] bg-indigo-600" />
             </div>
 
             <div className="mt-8 text-center text-xs text-gray-500">

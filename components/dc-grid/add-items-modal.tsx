@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Trash2, ChevronDown, ChevronUp, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -387,8 +388,8 @@ export function AddItemsModal({
                                                                 }
                                                             }}
                                                             className={`bg-slate-950/50 border-slate-700 text-white focus:ring-1 h-10 transition-colors ${items.filter(i => i.itemName.trim().toLowerCase() === item.itemName.trim().toLowerCase() && item.itemName.trim() !== '').length > 1
-                                                                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                                                                    : 'focus:ring-brand focus:border-brand'
+                                                                ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                                                                : 'focus:ring-brand focus:border-brand'
                                                                 }`}
                                                             placeholder="e.g. Steel Pipe 20mm"
                                                             autoComplete="off"
@@ -429,13 +430,28 @@ export function AddItemsModal({
                                                 </div>
 
                                                 <div className="md:col-span-3 space-y-2">
-                                                    <Label className="text-slate-300 text-xs font-medium uppercase tracking-wider">UOM <span className="text-red-400">*</span></Label>
-                                                    <Input
+                                                    <Label className="text-slate-300  text-xs font-medium uppercase tracking-wider">UOM <span className="text-red-400">*</span></Label>
+                                                    <Select
                                                         value={item.uom}
-                                                        onChange={(e) => handleChange(item.id, 'uom', e.target.value)}
-                                                        className="bg-slate-950/50 border-slate-700 text-white focus:ring-1 focus:ring-brand focus:border-brand h-10 transition-colors"
-                                                        placeholder="e.g. Pcs"
-                                                    />
+                                                        onValueChange={(value) => handleChange(item.id, 'uom', value)}
+                                                        
+                                                    >
+                                                        <SelectTrigger className="bg-slate-950/50 border-slate-700 text-white focus:ring-1 w-full  py-5 focus:ring-brand focus:border-brand ">
+                                                            <SelectValue placeholder="Select Unit" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                                                            <SelectItem value="KG">Kilogram (KG)</SelectItem>
+                                                            <SelectItem value="NOS">Nos</SelectItem>
+                                                            <SelectItem value="LTR">Litre (LTR)</SelectItem>
+                                                            <SelectItem value="MTR">Metre (MTR)</SelectItem>
+                                                            <SelectItem value="SQFT">Square Foot (SQFT)</SelectItem>
+                                                            <SelectItem value="CUM">Cubic Metre (CUM)</SelectItem>
+                                                            <SelectItem value="TON">Tonne (TON)</SelectItem>
+                                                            <SelectItem value="SET">Set</SelectItem>
+                                                            <SelectItem value="BAG">Bag</SelectItem>
+                                                            <SelectItem value="BOX">Box</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
 
                                                 <div className="md:col-span-3 space-y-2">
@@ -462,7 +478,7 @@ export function AddItemsModal({
                                                 </div>
 
                                                 {/* Row 3: Project Info & Rate */}
-                                                <div className="md:col-span-4 space-y-2">
+                                                <div className="md:col-span-4 space-y-2 ">
                                                     <Label className="text-slate-300 text-xs font-medium uppercase tracking-wider">Project Name <span className="text-red-400">*</span></Label>
                                                     <Input
                                                         value={item.projectName}

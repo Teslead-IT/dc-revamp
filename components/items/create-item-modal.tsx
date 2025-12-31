@@ -69,7 +69,7 @@ export function CreateItemModal({ open, onOpenChange, onItemCreated }: CreateIte
                                 id="itemName"
                                 value={itemName}
                                 onChange={(e) => setItemName(e.target.value)}
-                                placeholder="e.g., Valve-10, Yogurt-90"
+                                placeholder="e.g., Valve-10"
                                 className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
                                 disabled={createItem.isPending}
                                 autoFocus

@@ -390,7 +390,7 @@ export default function SuppliersGrid() {
                     setEditForm({})
                 }
             }}>
-                <SheetContent className="bg-[#0B1120] border-l border-slate-800 text-white w-[500px] sm:w-[600px] overflow-y-auto p-0">
+                <SheetContent className="bg-[#0B1120] border-l border-slate-800 text-white w-[500px] sm:w-[600px] overflow-y-auto p-0" onInteractOutside={(e) => e.preventDefault()}>
                     {/* Header */}
                     <div className="sticky top-0 bg-[#0B1120] z-10 border-b border-slate-800/50 px-6 py-4">
                         <div className="flex items-center justify-between">

@@ -130,64 +130,8 @@ export default function SuppliersGrid() {
 
     const totalPages = Math.ceil(suppliers.length / pageSize)
 
-    // Column Definitions with actions column
+    // Column Definitions
     const colDefs = useMemo<ColDef[]>(() => [
-        {
-            field: "actions",
-            headerName: "",
-            cellRenderer: (params: any) => {
-                if (!params.data) return null
-                return (
-                    <div className="flex items-center justify-center h-full w-full">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 p-0 text-slate-500 hover:text-emerald-500 hover:bg-transparent actions-icon opacity-0 duration-200 data-[state=open]:opacity-100"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <MoreHorizontal className="h-5 w-5" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 bg-[#1e293b] border-slate-700 text-slate-200">
-                                <DropdownMenuItem
-                                    className="focus:bg-slate-800 focus:text-white cursor-pointer group"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleEdit(params.data)
-                                    }}
-                                >
-                                    <Pencil className="mr-2 h-4 w-4 text-slate-400 group-hover:text-blue-400" />
-                                    <span>Edit Supplier</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-slate-700" />
-                                <DropdownMenuItem
-                                    className="focus:bg-red-900/30 focus:text-red-400 text-red-400 cursor-pointer"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleDelete(params.data)
-                                    }}
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Delete</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                )
-            },
-            pinned: "left",
-            lockPinned: true,
-            width: 50,
-            cellClass: "flex items-center justify-center p-0",
-            suppressHeaderMenuButton: true,
-            suppressMovable: true,
-            lockPosition: "left",
-            resizable: false,
-            sortable: false,
-            filter: false
-        },
         {
             field: "partyId",
             headerName: "Party ID",
@@ -422,18 +366,6 @@ export default function SuppliersGrid() {
                 }
                 
                 .ag-row, .ag-cell, .ag-cell-value {
-                    border: none !important;
-                }
-                
-                /* Show action icon on hover */
-                .ag-row:hover .actions-icon, 
-                .ag-row-selected .actions-icon {
-                    opacity: 1 !important;
-                }
-                
-                .ag-header-cell[col-id="actions"], 
-                .ag-cell[col-id="actions"] {
-                    background-color: #0B1120 !important;
                     border: none !important;
                 }
             `}</style>

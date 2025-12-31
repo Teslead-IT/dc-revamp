@@ -50,8 +50,13 @@ export function CreateItemModal({ open, onOpenChange, onItemCreated }: CreateIte
     }
 
     return (
-        <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="bg-[#1e293b] border-slate-700 text-white sm:max-w-[500px]">
+        <Dialog open={open} onOpenChange={(open) => {
+            // Prevent closing on outside click - only allow close via X or Cancel button
+            if (!open && !createItem.isPending) {
+                handleClose()
+            }
+        }}>
+            <DialogContent className="bg-[#1e293b] border-slate-700 text-white sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle className="text-xl font-bold">Create New Item</DialogTitle>
                     <DialogDescription className="text-slate-400">

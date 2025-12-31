@@ -552,6 +552,55 @@ class ExternalApiClient {
     async deleteDraftDC(id: string | number) {
         return this.delete(`/api/draft-dc/${id}`);
     }
+
+    // ============= Items Methods =============
+
+    /**
+     * Get all items with optional search and pagination
+     * @param search - Optional search term to filter items
+     * @param page - Page number (default: 1)
+     * @param limit - Items per page (default: 20)
+     */
+    async getItems(search?: string, page: number = 1, limit: number = 20) {
+        let query = `/api/items?page=${page}&limit=${limit}`;
+        if (search) {
+            query += `&search=${encodeURIComponent(search)}`;
+        }
+        return this.get(query);
+    }
+
+    /**
+     * Get item by ID
+     * @param itemId - Item ID to fetch
+     */
+    async getItem(itemId: string | number) {
+        return this.get(`/api/items/${itemId}`);
+    }
+
+    /**
+     * Create a new item
+     * @param itemData - Item data containing itemName
+     */
+    async createItem(itemData: { itemName: string }) {
+        return this.post('/api/items', itemData);
+    }
+
+    /**
+     * Update an existing item
+     * @param itemId - Item ID to update
+     * @param itemData - Updated item data containing itemName
+     */
+    async updateItem(itemId: string | number, itemData: { itemName: string }) {
+        return this.put(`/api/items/${itemId}`, itemData);
+    }
+
+    /**
+     * Delete an item
+     * @param itemId - Item ID to delete
+     */
+    async deleteItem(itemId: string | number) {
+        return this.delete(`/api/items/${itemId}`);
+    }
 }
 
 // Export singleton instance

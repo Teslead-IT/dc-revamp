@@ -25,7 +25,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useSuppliers, useDeleteSupplier, useUpdateSupplier } from "@/hooks/use-suppliers"
-import { SupplierDeleteDialog } from "@/components/suppliers/supplier-delete-dialog"
+import { DeleteDialog } from "../ui/delete-dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { CreateSupplierModal } from "@/components/dc-grid/create-supplier-modal"
 import { useHeaderStore } from "@/hooks/use-header-store"
@@ -143,24 +143,28 @@ export default function SuppliersGrid() {
         {
             field: "partyName",
             headerName: "Party Name",
-            width: 200,
+            flex: 2,
+            minWidth: 200,
             cellClass: "font-medium text-white"
         },
         {
             field: "gstinNumber",
             headerName: "GSTIN",
-            width: 180,
+            flex: 1,
+            minWidth: 150,
             cellClass: "font-mono text-slate-300"
         },
         {
             field: "city",
             headerName: "City",
-            width: 150
+            flex: 1,
+            minWidth: 140
         },
         {
             field: "state",
             headerName: "State",
-            width: 150
+            flex: 1,
+            minWidth: 140
         },
         {
             field: "pinCode",
@@ -170,13 +174,15 @@ export default function SuppliersGrid() {
         {
             field: "email",
             headerName: "Email",
-            width: 200,
+            flex: 1.5,
+            minWidth: 200,
             cellClass: "text-blue-300"
         },
         {
             field: "phone",
             headerName: "Phone",
-            width: 140,
+            flex: 1,
+            minWidth: 140,
             cellClass: "text-slate-300"
         }
     ], [])
@@ -657,12 +663,16 @@ export default function SuppliersGrid() {
             </Sheet>
 
             {/* Delete Confirmation Dialog */}
-            <SupplierDeleteDialog
+            <DeleteDialog
                 open={deleteDialogOpen}
                 onOpenChange={setDeleteDialogOpen}
                 onConfirm={handleConfirmDelete}
-                supplierName={deleteTarget?.partyName}
-                supplierId={deleteTarget?.partyId}
+                title="Delete Supplier?"
+                description="Are you sure you want to delete this supplier? This action will permanently remove the supplier and all associated data from the system."
+                itemName={deleteTarget?.partyName}
+                itemId={deleteTarget?.partyId}
+                variant="delete"
+                successMessage="Supplier deleted successfully."
             />
 
             {/* Create Supplier Modal */}

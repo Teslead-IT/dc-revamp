@@ -13,17 +13,47 @@ import {
 } from "@/components/ui/alert-dialog"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 
-interface SupplierDeleteDialogProps {
+export type DeleteDialogVariant = 'trash' | 'delete'
+
+interface DeleteDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onConfirm: () => Promise<void> | void;
-    supplierName?: string;
-    supplierId?: string;
+    title: string;
+    description: string;
+    itemName?: string;
+    itemId?: string;
+    variant?: DeleteDialogVariant;
+    successMessage?: string;
+    loadingMessage?: string;
 }
 
-export function SupplierDeleteDialog({ open, onOpenChange, onConfirm, supplierName, supplierId }: SupplierDeleteDialogProps) {
+export function DeleteDialog({
+    open,
+    onOpenChange,
+    onConfirm,
+    title,
+    description,
+    itemName,
+    itemId,
+    variant = 'delete',
+    successMessage,
+    loadingMessage
+}: DeleteDialogProps) {
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
     const [errorMessage, setErrorMessage] = useState('')
+
+    // Determine colors based on variant
+    const isTrash = variant === 'trash'
+    const ribbonColor = isTrash ? 'bg-emerald-600' : 'bg-red-600'
+    const ribbonFoldColor = isTrash ? 'bg-emerald-800' : 'bg-red-800'
+    const buttonColor = isTrash ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
+    const loadingColor = isTrash ? 'text-emerald-500' : 'text-red-500'
+    const buttonText = isTrash ? 'Trash' : 'Delete Permanently'
+    const defaultSuccessMessage = isTrash
+        ? 'Item moved to recycle bin.'
+        : 'Item deleted successfully.'
+    const defaultLoadingMessage = isTrash ? 'Trashing...' : 'Deleting...'
 
     const handleConfirm = async () => {
         setStatus('loading')
@@ -38,7 +68,7 @@ export function SupplierDeleteDialog({ open, onOpenChange, onConfirm, supplierNa
             }, 1500)
         } catch (error: any) {
             setStatus('error')
-            setErrorMessage(error?.message || 'Failed to delete supplier')
+            setErrorMessage(error?.message || 'Failed to complete action')
         }
     }
 
@@ -55,34 +85,40 @@ export function SupplierDeleteDialog({ open, onOpenChange, onConfirm, supplierNa
 
     return (
         <AlertDialog open={open} onOpenChange={handleClose}>
-            <AlertDialogContent className="bg-[#1e293b] border-slate-700 p-0 overflow-hidden max-w-[500px] gap-0">
+            <AlertDialogContent className="bg-[#1e293b] border-slate-700 p-0 overflow-visible max-w-[500px] gap-0">
 
                 {status === 'idle' && (
                     <>
                         {/* Header with Ribbon */}
-                        <div className="relative pt-8 px-6 pb-2">
+                        <div className="relative pt-12 px-6 pb-2">
                             {/* Ribbon Tag */}
-                            <div className="absolute top-0 left-8 bg-red-600 text-white text-sm font-medium px-4 py-1.5 rounded-b-md shadow-lg z-10">
-                                Delete Supplier?
+                            <div className={`absolute -top-3 left-6 ${ribbonColor} text-white text-sm font-semibold px-6 py-2 rounded-r-md rounded-bl-md shadow-lg z-20`}>
+                                {title}
+                                {/* Fold Triangle */}
+                                <div className={`absolute bottom-6 -left-2 w-2 h-3 ${ribbonFoldColor} [clip-path:polygon(100%_0,0_100%,100%_100%)] brightness-75`}></div>
                             </div>
 
-                            {/* Folded ribbon effect */}
-                            <div className="absolute top-0 left-[calc(2rem-4px)] w-2 h-2 bg-red-800 skew-x-[-45deg] z-0"></div>
-
-                            <AlertDialogHeader className="mt-4">
-                                <AlertDialogTitle className="sr-only">Delete Supplier</AlertDialogTitle>
+                            <AlertDialogHeader className="mt-2">
+                                <AlertDialogTitle className="sr-only">{title}</AlertDialogTitle>
                                 <AlertDialogDescription className="text-slate-300 text-sm leading-relaxed mt-2">
-                                    Are you sure you want to delete this supplier? This action will permanently remove the supplier and all associated data from the system.
-                                    {supplierName && supplierId && (
+                                    {description}
+                                    {itemName && itemId && (
                                         <span className="block mt-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
-                                            <span className="block text-xs text-slate-500 mb-1">Supplier Details</span>
-                                            <span className="block text-white font-semibold">{supplierName}</span>
-                                            <span className="block text-xs text-slate-400 mt-1">ID: {supplierId}</span>
+                                            <span className="block text-xs text-slate-500 mb-1">Details</span>
+                                            <span className="block text-white font-semibold">{itemName}</span>
+                                            <span className="block text-xs text-slate-400 mt-1">ID: {itemId}</span>
                                         </span>
                                     )}
-                                    <span className="block mt-3 text-xs text-red-400 font-medium">
-                                        ⚠️ Warning: This action cannot be undone.
-                                    </span>
+                                    {itemName && !itemId && (
+                                        <span className="block mt-2 text-white font-medium">
+                                            Item: {itemName}
+                                        </span>
+                                    )}
+                                    {variant === 'delete' && (
+                                        <span className="block mt-3 text-xs text-red-400 font-medium">
+                                            ⚠️ Warning: This action cannot be undone.
+                                        </span>
+                                    )}
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                         </div>
@@ -94,9 +130,9 @@ export function SupplierDeleteDialog({ open, onOpenChange, onConfirm, supplierNa
                                     e.preventDefault();
                                     handleConfirm();
                                 }}
-                                className="bg-red-600 hover:bg-red-700 text-white border-0"
+                                className={`${buttonColor} text-white border-0`}
                             >
-                                Delete Permanently
+                                {buttonText}
                             </AlertDialogAction>
                             <AlertDialogCancel className="bg-transparent border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white mt-0">
                                 Cancel
@@ -107,9 +143,9 @@ export function SupplierDeleteDialog({ open, onOpenChange, onConfirm, supplierNa
 
                 {status === 'loading' && (
                     <div className="p-12 flex flex-col items-center justify-center">
-                        <AlertDialogTitle className="sr-only">Deleting</AlertDialogTitle>
-                        <Loader2 className="h-12 w-12 text-red-500 animate-spin mb-4" />
-                        <p className="text-slate-300 text-sm">Deleting supplier...</p>
+                        <AlertDialogTitle className="sr-only">Processing</AlertDialogTitle>
+                        <Loader2 className={`h-12 w-12 ${loadingColor} animate-spin mb-4`} />
+                        <p className="text-slate-300 text-sm">{loadingMessage || defaultLoadingMessage}</p>
                     </div>
                 )}
 
@@ -121,7 +157,7 @@ export function SupplierDeleteDialog({ open, onOpenChange, onConfirm, supplierNa
                         </div>
                         <h3 className="text-white font-semibold text-lg mb-2">Success!</h3>
                         <p className="text-slate-300 text-sm text-center">
-                            Supplier deleted successfully.
+                            {successMessage || defaultSuccessMessage}
                         </p>
                     </div>
                 )}

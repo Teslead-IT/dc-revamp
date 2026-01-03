@@ -25,7 +25,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { ActionsCellRenderer } from "./cell-renderers/actions-cell"
 import { DCContextMenu } from "./dc-context-menu"
 import { useHeaderStore } from "@/hooks/use-header-store"
-import { DCDeleteDialog } from "./dc-delete-dialog"
+import { DeleteDialog } from "../ui/delete-dialog"
 import type { ColumnConfig } from "./column-manager"
 import { useDraftDCs, useDraftDCDetails, useDeleteDraftDC } from "@/hooks/use-draft-dc"
 
@@ -202,12 +202,25 @@ export default function DCGrid() {
                         const data = params.data
                         return data?.supplierSnapshot?.partyName || data?.partyDetails?.partyName || 'N/A'
                     },
-                    width: 180
+                    flex: 1.5,
+                    minWidth: 180
                 },
                 {
                     field: "process",
                     headerName: "Process",
-                    width: 150
+                    flex: 1,
+                    minWidth: 150
+                },
+                {
+                    field: "projectDetails.projectName",
+                    headerName: "Project Name",
+                    flex: 1,
+                    minWidth: 150,
+                    valueGetter: (params) => {
+                        const data = params.data.draftDcItems
+                        const projectNames = data?.map((item: any) => item.projectName).join(', ')
+                        return projectNames || 'N/A'
+                    }
                 },
                 {
                     field: "dcDate",
@@ -221,7 +234,8 @@ export default function DCGrid() {
                 {
                     field: "dcType",
                     headerName: "Department",
-                    width: 120
+                    flex: 1,
+                    minWidth: 120
                 },
                 {
                     field: "draftDcItems",
@@ -250,10 +264,11 @@ export default function DCGrid() {
                 {
                     field: "vehicleNo",
                     headerName: "Vehicle No",
-                    width: 140
+                    flex: 1,
+                    minWidth: 140
                 },
                 {
-                    field: "draftDcItems",
+                    field: "projectIncharge",
                     headerName: "Incharge",
                     valueGetter: (params) => {
                         const items = params.data?.draftDcItems || []
@@ -264,7 +279,8 @@ export default function DCGrid() {
                         const uniqueIncharges = [...new Set(incharges)]
                         return uniqueIncharges.join(', ') || 'N/A'
                     },
-                    width: 180
+                    flex: 1,
+                    minWidth: 180
                 }
             ]
         }
@@ -311,7 +327,8 @@ export default function DCGrid() {
                 cellClass: (params) => {
                     return "text-slate-300"
                 },
-                width: 180
+                flex: 1,
+                minWidth: 180
             },
             {
                 field: "itemsCount",
@@ -330,7 +347,8 @@ export default function DCGrid() {
             {
                 field: "customerName",
                 headerName: "Customer",
-                width: 180
+                flex: 1.5,
+                minWidth: 180
             },
             {
                 field: "priority",
@@ -341,14 +359,17 @@ export default function DCGrid() {
                 field: "createdBy",
                 headerName: "Created By",
                 cellRenderer: OwnerCellRenderer,
-                width: 180
+                flex: 1,
+                minWidth: 180
             },
             {
                 field: "totalValue",
                 headerName: "Value",
                 valueFormatter: (params) => {
                     return params.value ? `₹ ${params.value.toLocaleString()} /-` : ""
-                }
+                },
+                flex: 1,
+                minWidth: 120
             }
         ]
     }, [activeView])
@@ -446,7 +467,7 @@ export default function DCGrid() {
             <div className="flex-1 relative">
                 <div className="ag-theme-balham-dark absolute inset-0 custom-ag-grid">
                     <AgGridReact
-                        theme="legacy" // Fix error #239
+                        theme="legacy"
                         ref={gridRef}
                         rowData={data?.rowData || []}
                         columnDefs={colDefs}
@@ -573,11 +594,15 @@ export default function DCGrid() {
                 />
             )}
 
-            <DCDeleteDialog
+            <DeleteDialog
                 open={deleteDialogOpen}
                 onOpenChange={setDeleteDialogOpen}
                 onConfirm={handleConfirmDelete}
+                title="Trash Delivery Challan?"
+                description="This action will remove all its associated modules. You can restore trashed delivery challan(s) from the Recycle Bin within 60 days."
                 itemName={deleteTarget?.draftId}
+                variant="trash"
+                successMessage="Delivery Challan moved to recycle bin."
             />
         </div>
     )

@@ -66,8 +66,8 @@ export function NewDCSheet() {
     const [notes, setNotes] = useState('')
 
     // Items state
-    const [enableWeight, setEnableWeight] = useState(true)
-    const [enableSqft, setEnableSqft] = useState(true)
+    const [enableWeight, setEnableWeight] = useState(false)
+    const [enableSqft, setEnableSqft] = useState(false)
     const [showAddItemsModal, setShowAddItemsModal] = useState(false)
     const [items, setItems] = useState<ItemRow[]>([])
 
@@ -99,8 +99,8 @@ export function NewDCSheet() {
             setDCType('SPM')
             setDCDate('')
             setNotes('')
-            setEnableWeight(true)
-            setEnableSqft(true)
+            setEnableWeight(false)
+            setEnableSqft(false)
             setItems([])
         }
     }, [open])
@@ -411,7 +411,7 @@ export function NewDCSheet() {
                                         <Label className="text-slate-100">DC Date <span className="text-red-500">*</span></Label>
                                         <Input
                                             type="date"
-                                            value={dcDate}
+                                            value={dcDate || new Date().toISOString().split('T')[0]}
                                             onChange={(e) => setDCDate(e.target.value)}
                                             className="bg-slate-900/50 border-slate-700 text-slate-100 placeholder:text-slate-600 focus:border-brand"
                                         />

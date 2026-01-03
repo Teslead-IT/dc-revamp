@@ -12,9 +12,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, User, Package, Truck, Calendar, FileText, Loader2, Edit, Trash2, Save, X, Plus, RefreshCcw } from "lucide-react"
+import { ArrowLeft, User, Package, Truck, Calendar, FileText, Loader2, Edit, Trash2, Save, X, Plus, RefreshCcw, Eye } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { DCDeleteDialog } from "@/components/dc-grid/dc-delete-dialog"
+import { DeleteDialog } from "@/components/ui/delete-dialog"
 import { AddItemsModal } from "@/components/dc-grid/add-items-modal"
 import { CreateSupplierModal } from "@/components/dc-grid/create-supplier-modal"
 import { showToast as toast } from "@/lib/toast-service"
@@ -439,19 +439,27 @@ export default function DraftDCViewPage() {
             </div>
 
             {/* Delete DC Dialog */}
-            <DCDeleteDialog
+            <DeleteDialog
                 open={deleteDialogOpen}
                 onOpenChange={setDeleteDialogOpen}
                 onConfirm={handleDelete}
+                title="Trash Delivery Challan?"
+                description="This action will remove all its associated modules. You can restore trashed delivery challan(s) from the Recycle Bin within 60 days."
                 itemName={draft.draftId}
+                variant="trash"
+                successMessage="Delivery Challan moved to recycle bin."
             />
 
             {/* Delete Item Dialog */}
-            <DCDeleteDialog
+            <DeleteDialog
                 open={deleteItemDialogOpen}
                 onOpenChange={setDeleteItemDialogOpen}
                 onConfirm={confirmItemDelete}
+                title="Delete Item?"
+                description="Are you sure you want to delete this item? This will permanently remove it from this delivery challan."
                 itemName={itemToDelete !== null ? items.find(i => i.id === itemToDelete)?.itemName || 'Item' : 'Item'}
+                variant="delete"
+                successMessage="Item deleted successfully."
             />
 
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -583,7 +591,7 @@ export default function DraftDCViewPage() {
                                 <Package className="h-5 w-5 text-brand" />
                                 Items ({items.length})
                             </CardTitle>
-                            {isEditMode && (
+                            {isEditMode ? (
                                 <div className="flex items-center gap-4">
                                     {/* Show Weight Checkbox */}
                                     <div className="flex items-center space-x-2">
@@ -633,6 +641,16 @@ export default function DraftDCViewPage() {
                                         Update Items
                                     </Button>
                                 </div>
+                            ) : (
+                                <Button
+                                    onClick={() => setShowAddItemsModal(true)}
+                                    size="sm"
+                                    variant="ghost"
+                                    className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer"
+                                >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    View all items
+                                </Button>
                             )}
                         </CardHeader>
                         <CardContent>
@@ -880,10 +898,10 @@ export default function DraftDCViewPage() {
                 open={showAddItemsModal}
                 onOpenChange={setShowAddItemsModal}
                 onConfirm={handleItemsConfirm}
-                enableWeight={editableDC.showWeight}
-                enableSqft={editableDC.showSquareFeet}
+                enableWeight={isEditMode ? editableDC.showWeight : draft.showWeight}
+                enableSqft={isEditMode ? editableDC.showSquareFeet : draft.showSquareFeet}
                 initialItems={items}
-                mode="update"
+                mode={isEditMode ? "update" : "view"}
             />
 
             {/* Create Supplier Modal */}

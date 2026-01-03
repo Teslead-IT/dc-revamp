@@ -25,7 +25,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useItems, useDeleteItem, useUpdateItem, type Item } from "@/hooks/use-items"
-import { ItemDeleteDialog } from "@/components/items/item-delete-dialog"
+import { DeleteDialog } from "@/components/ui/delete-dialog"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { CreateItemModal } from "@/components/items/create-item-modal"
 import { useHeaderStore } from "@/hooks/use-header-store"
@@ -549,12 +549,16 @@ export default function ItemsGrid() {
             </Sheet>
 
             {/* Delete Confirmation Dialog */}
-            <ItemDeleteDialog
+            <DeleteDialog
                 open={deleteDialogOpen}
                 onOpenChange={setDeleteDialogOpen}
                 onConfirm={handleConfirmDelete}
+                title="Delete Item?"
+                description="Are you sure you want to delete this item? This action will permanently remove the item and all associated data from the system."
                 itemName={deleteTarget?.itemName}
                 itemId={deleteTarget?.standardItemId}
+                variant="trash"
+                successMessage="Item deleted successfully."
             />
 
             {/* Create Item Modal */}
